@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!-- XML file to be used with XMLTutorial.cs -->
+
+<jellyfish Name="Jellyfish1" ID="001" >
+
+	<!-- Child elements of jellyfish hold grid co-ordindates and dimensions -->
+	<x_pos>10</x_pos>
+	<y_pos>10</y_pos>
+	<width>100</width>
+	<height>100</height>
+
+</jellyfish>
