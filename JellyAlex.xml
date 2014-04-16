@@ -1,0 +1,30 @@
+
+<Jellyfish
+	Name="PS1X1"
+	Type="Floating"
+	Resizable="False">
+
+	
+
+	<Appearance
+		Status="Default"
+		AspectRatio="1.0"
+		Spacing="5%"
+		Mask="Rectangle.svg">
+
+		<La> </La>
+		<BlackHole> </BlackHole>
+		<Frank> </Frank>
+		<Style> </Style>
+		<Resize> </Resize>
+		<Spanner> </Spanner>
+		<Title> </Title>
+		<Bungee> </Bungee>
+		
+
+	</Appearance>
+	
+
+		
+
+</Jellyfish>
