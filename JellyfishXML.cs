@@ -1,7 +1,12 @@
 ﻿/*
- * For use with any xml files meeting the psml specifications.
+ * For use with any xml files meeting the psml (Pocket Spacecraft Markup Language) specifications.
  * 
- * At present all unknown child tags are skipped (warning is printed in debug log).
+ * Current version reads through all elements and prints a list of all expected elements
+ * to the debug logger and a boolean expression: True if the element was found in the file,
+ * else False.
+ * 
+ * At present a warning is printed if any unknown elements are encountered and that element
+ * (along with all nested elements) is skipped.
  * */
 
 using UnityEngine;
@@ -13,6 +18,7 @@ public class JellyfishXML : MonoBehaviour {
 
 	// xml file to read in must be stated in XmlReader declaration
 	XmlReader myReader = XmlReader.Create("Assets/JellyFishV0.11.xml");
+
 	// Booleans for all elements expected in psml file.
 	private bool jellyfish = false;
 	private bool appearance = false;
