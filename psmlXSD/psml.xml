@@ -4,30 +4,103 @@
 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 xsi:noNamespaceSchemaLocation="psml.xsd">
 
- <Jellyfish 
+<Jellyfish
+	Name="PS1X1"
 	Type="Static"
-        Name="Alex"
-	Resizeable="true">
-    <Appearance
-	Status="Alert"
-	AspectRatio="0.25"
-	Spacing="5"
-	Mask="Rectangle.svg">
-	
-       <BlackHole/>
-	<Style
-		Border="Solid"
-		FillColour="#11FA12">
-		<Graphic
-			Default="whatever.svg"/>
-	</Style>
-	 
-	<Resize/>
-	<Title/>
-	<Bungee/>
+	Resizable="false">
 
-    </Appearance>
- 
-  </Jellyfish>
+	<Appearance
+		Status="Default"
+		AspectRatio="1.0"
+		Spacing="5"
+		Mask="Rectangle.svg">
+
+		<Style
+			Border="Solid"
+			FillColour="#660000">
+			<Graphic
+				Default="BorderSolid100.svg"
+				Ratio_50="BorderSolid50.svg"
+				Ratio_150="BorderSolid150.svg">
+			</Graphic>
+		</Style>
+
+		<BlackHole
+			X="88.15" Y="2.75"
+			Width="9.1" Height="9.1">
+
+			<Graphic
+				Default="BlackHole.svg"
+				Hover="BlackHoleHover.svg"
+				Selected="BlackHoleSelected.svg"
+				Disabled="BlackHoleDisabled.svg">
+			</Graphic>
+	
+			<HotArea
+				X="85.4" Y="0"
+				Width="14.6" Height="14.6">
+			</HotArea>
+		</BlackHole>
+
+
+		<Resize
+			MaxX="-9.1" MaxY="-9.1" 
+			Width="9.1" Height="9.1">
+			<Graphic
+				Default="Resize.svg"
+				Hover="ResizeHover.svg"
+				Selected="ResizeSelected.svg"
+				Disabled="ResizeDisabled.svg">
+			</Graphic>
+
+			<HotArea
+				X="-14.6" 
+				Y="0"
+				Width="14.6" Height="14.6">
+			</HotArea>
+
+		</Resize>
+
+		<Title
+			X="10" Y="0"
+			Width="80" Height="15.6"
+			Style="Text"
+			HorizontalAlignment="Centre"
+			VerticalAlignment="Centre">
+			<Font
+			Face="Times" Weight="Normal"
+			Size="10" Colour="#BBE9FF">
+			</Font>
+		</Title>
+      
+		<Bungee>
+			<Connector
+				Type="Start"
+				X="100" Y="93"
+				Width="1.5" Height="7">
+			</Connector>
+
+			<Connector
+				Type="Stop"
+				X="-2" Y="6.3"
+				Width="2" Height="3">
+				<Marker
+					Width="1.5" Height="3"
+					Graphic="MarkerStop.svg">
+				</Marker>
+          
+			</Connector>
+				
+			<Line
+				Colour="#BBE9FF"
+				MaxWidth="1.5"
+				WidthPerLayer="0.5"
+				AvoidJellyfish="false"
+				MergeLinesAtSameLevel="true">
+			</Line>
+		</Bungee>
+	</Appearance>
+
+</Jellyfish>
 
 </psml>
