@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<psml id="889923"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:noNamespaceSchemaLocation="psml.xsd">
+  <Jellyfish 
+	Name="Alex"
+	Type="Static"
+	Resizeable="true">
+    <Appearance
+	Status="Alert"
+	AspectRatio="0.25"
+	Spacing="5"
+	Mask="Rectangle.svg">
+	
+	<Style/>
+	<BlackHole/>
+	<Resize/>
+	<Title/>
+	<Bungee/>
+
+    </Appearance>
+ 
+  </Jellyfish>
+</psml>

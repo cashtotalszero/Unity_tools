@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <xs:complexType name="appearance">
+    
+    <xs:sequence>
+      <xs:element name="Style" minOccurs="0"/>
+      <xs:element name="BlackHole" minOccurs="0"/>
+      <xs:element name="Resize" minOccurs="0"/>
+      <xs:element name="Title" minOccurs="0"/>
+      <xs:element name="Bungee" minOccurs="0"/>
+    </xs:sequence>
+  
+    <xs:attribute name="Status" use="required">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="Default"/>
+          <xs:enumeration value="Selected"/>
+          <xs:enumeration value="Alert"/>
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+
+    <xs:attribute name="AspectRatio" use="required">
+      <xs:simpleType>
+        <xs:restriction base="xs:float">
+         <xs:minInclusive value="0.25"/>
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="Spacing" type="xs:float" use="required"/>
+    <xs:attribute name="Mask" type="xs:string" use="required"/>
+ 
+  </xs:complexType>
+
+  <!-- Definition of <Jellyfish> tag -->
+  <xs:complexType name="jellyfish">
+    
+    <!-- Nested element -->
+    <xs:sequence>
+      <xs:element name="Appearance" type="appearance" minOccurs="1"/>
+    </xs:sequence>
+    
+    <!-- Attribute definitions -->
+    <xs:attribute name="Name" type="xs:string" use="required"/>
+    <xs:attribute name="Type" use="required">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="Static"/>
+          <xs:enumeration value="Frozen"/>
+          <xs:enumeration value="Floating"/>
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="Resizeable" type="xs:boolean" use="required"/>
+    <xs:attribute name="LockAspectRatioOnResize" type="xs:boolean" use="optional"/>
+  
+  </xs:complexType>
+
+  <!-- Definition of <psml> tag -->
+  <xs:complexType name="psmltype">
+    
+    <!-- Nested element <Jellyfish> must occur at least once -->
+    <xs:sequence>
+      <xs:element name="Jellyfish" type="jellyfish" minOccurs="1"/>
+    </xs:sequence>
+    
+    <!-- Optional id attribute -->
+    <xs:attribute name="id" type="xs:string" use="optional"/>
+ 
+  </xs:complexType>
+
+  <!-- Declaration of root <psml> element -->
+  <xs:element name="psml" type="psmltype"/>
+
+</xs:schema>
