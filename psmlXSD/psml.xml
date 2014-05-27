@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<psml id="889923"
+<psml Version="889923"
 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 xsi:noNamespaceSchemaLocation="psml.xsd">
-  <Jellyfish 
-	Name="Alex"
+
+ <Jellyfish 
 	Type="Static"
+        Name="Alex"
 	Resizeable="true">
     <Appearance
 	Status="Alert"
@@ -13,8 +14,14 @@ xsi:noNamespaceSchemaLocation="psml.xsd">
 	Spacing="5"
 	Mask="Rectangle.svg">
 	
-	<Style/>
-	<BlackHole/>
+       <BlackHole/>
+	<Style
+		Border="Solid"
+		FillColour="#11FA12">
+		<Graphic
+			Default="whatever.svg"/>
+	</Style>
+	 
 	<Resize/>
 	<Title/>
 	<Bungee/>
@@ -22,4 +29,5 @@ xsi:noNamespaceSchemaLocation="psml.xsd">
     </Appearance>
  
   </Jellyfish>
+
 </psml>
