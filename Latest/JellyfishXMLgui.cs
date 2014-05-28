@@ -1,8 +1,8 @@
 ﻿/*
  * For use with any xml files meeting the psml (Pocket Spacecraft Markup Language) specifications.
  * 
- * Current version validates file and reads through all elements. A list of all expected elements
- * is printed on the GUI with a boolean expression: True if the element was found in the file,
+ * Current version validates XML file and reads through all elements. A list of all expected elements
+ * is printed to the log file with a boolean expression: True if the element was found in the file,
  * else False.
  * 
  * At present a warning is printed if any unknown elements are encountered and that element
@@ -23,8 +23,7 @@ public class JellyfishXMLgui : MonoBehaviour {
 	// xml file to read in must be stated in XmlReader declaration
 	XmlReader myReader = XmlReader.Create("Assets/psml.xml");
 	
-	// Booleans for all expected elements in psml file.
-	private bool jellyfish = false;
+	// Booleans for all expected elements in each jellyfish.
 	private bool appearance = false;
 	private bool style = false;
 	private bool blackhole = false;
@@ -46,16 +45,16 @@ public class JellyfishXMLgui : MonoBehaviour {
 	private bool xmlError = false;
 	private bool warning = false;
 	private string myLog;
+	string jellyfishName;
 	
 	void Start () {
 
 		string elementName;
-		myLog = "WARNINGS:";
+		myLog = "------------------------------------------------------------\nWARNINGS:";
 
-		//XmlValidator.validateXML ("Assets/psml.xml");
-
-		if ( XmlValidator.validateXML ("Assets/psml.xml") /*validateXML()*/ ) {
+		if (XmlValidator.validateXML ("Assets/psml.xml")) {
 			while (myReader.Read()) {
+
 				// Skip the Xml header
 				if(myReader.NodeType == XmlNodeType.XmlDeclaration) {
 					myReader.Skip();
@@ -63,14 +62,19 @@ public class JellyfishXMLgui : MonoBehaviour {
 				// Step into the root node (expecting <psml>)
 				if (myReader.NodeType == XmlNodeType.Element && myReader.Name == "psml") {
 					while (myReader.NodeType != XmlNodeType.EndElement) {
-						myReader.Read ();							// Step into the next node.
-						elementName = myReader.Name;				// Get the element name from reader.
+						myReader.Read ();			
+						elementName = myReader.Name;	
 	
 						// Process exepected nested tags: <Jellyfish>
 						switch (elementName) {
 						case "Jellyfish":
-							jellyfish = true;
+							// Get the name and reset all tags before processing each jellyfish
+							jellyfishName = myReader.GetAttribute("Name");
+							resetTags();
+							// Process the jellyfish and output tags statuses to log
 							getJellyfish (myReader, elementName);
+							tagsToLog(jellyfishName);
+							// Move to the next jellyfish (if any)
 							myReader.Read ();
 							break;
 						case "psml":							// Do nothing with parent element.
@@ -91,59 +95,54 @@ public class JellyfishXMLgui : MonoBehaviour {
 			// Update log if necessary
 			if (!warning) {
 				myLog += "\nNone.";
-				Debug.Log(myLog);
 			}
+			myLog += "------------------------------------------------------------";
+			Debug.Log(myLog);
 		} 
 	}
 
-	// Method ensures provided XML file is well formed and valid
-	bool validateXML() {
-
-		// Set the validation settings.
-		XmlReaderSettings settings = new XmlReaderSettings();
-		settings.ValidationType = ValidationType.Schema;
-		settings.ValidationFlags |= XmlSchemaValidationFlags.ProcessInlineSchema;
-		settings.ValidationFlags |= XmlSchemaValidationFlags.ProcessSchemaLocation;
-		settings.ValidationFlags |= XmlSchemaValidationFlags.ReportValidationWarnings;
-		settings.ValidationEventHandler += new ValidationEventHandler(ValidationCallBack);
-		
-		// Create the XmlReader object.
-		XmlReader reader = XmlReader.Create("Assets/psml.xml", settings);
-		
-		// Parse the file. 
-		while (reader.Read()) ;
-
-	
-		XmlReader psml = XmlReader.Create("Assets/psml.xml");
-
-		// Try loading the XML document...
-		try
-		{
-			XmlDocument xmlDoc = new XmlDocument();
-			xmlDoc.Load(psml);
-	
-			// ...if no exceptions generated this is valid XML..
-			return true;
-		}
-		// ...return false if invalid XML.
-		catch(System.Xml.XmlException exception)
-		{
-			myLog=exception.ToString();			// Print exception details to log
-			Debug.Log(myLog);
-			xmlError=true;
-			return false;
-		}
+	private void resetTags()
+	{
+		appearance = false;
+		style = false;
+	 	blackhole = false;
+		resize = false;
+		title = false;
+		titleFont = false;
+		bungee = false;
+		bungeeConnector = false;
+		bungeeConnectorMarker = false;
+		bungeeLine = false;
+		blackholeGraphic = false;
+		blackholeHotArea = false;
+		styleGraphic = false;
+		resizeGraphic = false;
+		resizeHotArea = false;
 	}
 
-	// Display any warnings or errors in XML file.
-	private static void ValidationCallBack(object sender, ValidationEventArgs args)
+	private void tagsToLog(string name)
 	{
-		if (args.Severity == XmlSeverityType.Warning)
-			Debug.Log("\tWarning: Matching schema not found.  No validation occurred." + args.Message);
-		else
-			Debug.Log("\tValidation error: " + args.Message);
-		
-	}	
+		Debug.Log (
+			"Tag status for Jellyfish: " + name + "\n" +
+			"TOP LEVEL TAGS\n" +
+			"Appearance = " + appearance + "\n" +
+			"Style = " + style + "\n" +
+			"BlackHole = " + blackhole + "\n" +
+			"Resize = " + resize + "\n" +
+			"Title = " + title + "\n" +
+			"Bungee = " + bungee + "\n\n" +
+			"NESTED TAGS (parent in brackets)\n" +
+			"Graphic (Style) = " + styleGraphic + "\n" +
+			"Graphic (BlackHole) = " + blackholeGraphic + "\n" +
+			"HotArea (BlackHole) = " + blackholeHotArea + "\n" +
+			"Graphic (Resize) = " + resizeGraphic + "\n" +
+			"HotArea (Resize) = " + resizeHotArea + "\n" +
+			"Font (Title) = " + titleFont + "\n" +
+			"Connector (Bungee) = " + bungeeConnector + "\n" +
+			"Marker (Bungee->Connector) = " + bungeeConnectorMarker + "\n" +
+			"Line (Bungee) = " + bungeeLine + "\n\n"
+			);
+	}
 
 	// Method checks attributes & nested tags inside <Jellyfish> tag
 	void getJellyfish(XmlReader myReader, string elementName) {
@@ -369,47 +368,11 @@ public class JellyfishXMLgui : MonoBehaviour {
 	{
 		// Set warning flag and add details to error log
 		warning = true;
-		myLog+="\nUnknown element found inside <"+parentTag+"> tag: <"+elementName+">";
-		Debug.Log (myLog);
+		myLog += "\nFound in Jellyfish '" + jellyfishName + "':" +
+		"\nUnknown element found inside <"+parentTag+"> tag: <"+elementName+">\n";
 
 		// Reader skips this unrecognised element (and all child elements of this tag)
 		myReader.Skip();
 	}
-
-	// Method prints status of all tags to GUI
-	void OnGUI() {
-
-		if (xmlError) {
-			GUI.Label (new Rect (10, 10, Screen.width, Screen.height),
-			           "ERROR = Invalid or badly formed XML file\n"+myLog);
-		} 
-		else if (rootError) {
-			GUI.Label (new Rect (10, 10, Screen.width, Screen.height),
-			           "ERROR = Invalid root node. Expecting <psml>");
-		}
-		else {
-			GUI.Label (new Rect (10, 10, Screen.width, Screen.height), 
-			    "TAG STATUS:\n\n" +
-				"TOP LEVEL TAGS\n" +
-				"Jellyfish\t\t= " + jellyfish + "\n" +
-				"Appearance\t= " + appearance + "\n" +
-				"Style\t\t\t\t= " + style + "\n" +
-				"BlackHole\t\t= " + blackhole + "\n" +
-				"Resize\t\t\t= " + resize + "\n" +
-				"Title\t\t\t\t= " + title + "\n" +
-				"Bungee\t\t\t= " + bungee + "\n\n" +
-				"NESTED TAGS (parent in brackets)\n" +
-				"Graphic (Style)\t\t\t\t\t\t= " + styleGraphic + "\n" +
-				"Graphic (BlackHole)\t\t\t\t= " + blackholeGraphic + "\n" +
-				"HotArea (BlackHole)\t\t\t\t= " + blackholeHotArea + "\n" +
-				"Graphic (Resize)\t\t\t\t\t= " + resizeGraphic + "\n" +
-				"HotArea (Resize)\t\t\t\t\t= " + resizeHotArea + "\n" +
-				"Font (Title)\t\t\t\t\t\t\t\t= " + titleFont + "\n" +
-				"Connector (Bungee)\t\t\t\t= " + bungeeConnector + "\n" +
-				"Marker (Bungee->Connector)\t= " + bungeeConnectorMarker + "\n" +
-				"Line (Bungee)\t\t\t\t\t\t= " + bungeeLine + "\n\n" +
-				myLog);
-		} 
-	}
-
+	
 }
