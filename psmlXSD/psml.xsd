@@ -1,217 +1,148 @@
-<?xml version="1.0" encoding="UTF-8" ?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
 
-   <!-- Definition of <Marker> tag -->
-  <xs:complexType name="marker">
-
-    <!-- Nested elements (none at present) -->
-    <xs:sequence>
-      <xs:choice minOccurs="0" maxOccurs="unbounded">
-        <xs:any minOccurs="0" processContents="skip"/>
-      </xs:choice>
-    </xs:sequence>
-
-    <!-- Attribute definitions -->
-    <xs:attribute name="Width" type="xs:float" use="required"/>
-    <xs:attribute name="Height" type="xs:float" use="required"/>
-    <xs:attribute name="Graphic" type="xs:string" use="required"/>
-
-  </xs:complexType>
-
-  <!-- Definition of <Connector> tag -->
-  <xs:complexType name="connector">
-
-    <!-- Nested elements -->
-    <xs:sequence>
-      <xs:choice minOccurs="0" maxOccurs="unbounded">
-        <xs:element name="Marker" type="marker" minOccurs="0"/>
-        <xs:any minOccurs="0" processContents="skip"/>
-      </xs:choice>
-    </xs:sequence>
-
-    <!-- Attribute definitions -->
-     <xs:attribute name="Type" use="required">
-      <xs:simpleType>
-        <xs:restriction base="xs:string">
-          <xs:enumeration value="Start"/>
-          <xs:enumeration value="Stop"/>
-        </xs:restriction>
-      </xs:simpleType>
-    </xs:attribute>
-
-    <xs:attribute name="X" type="xs:float" use="required"/>
-    <xs:attribute name="Y" type="xs:float" use="required"/>
-    <xs:attribute name="Width" type="xs:float" use="required"/>
-    <xs:attribute name="Height" type="xs:float" use="required"/>
-
-  </xs:complexType>
-
-  <!-- Definition of <Line> tag -->
-  <xs:complexType name="line">
-
-    <!-- Nested elements (none at present) -->
-    <xs:sequence>
-      <xs:choice minOccurs="0" maxOccurs="unbounded">
-        <xs:any minOccurs="0" processContents="skip"/>
-      </xs:choice>
-    </xs:sequence>
-
-    <!-- Attribute definitions -->
-    <xs:attribute name="Colour" use="optional">
-      <xs:simpleType>
-        <xs:restriction base="xs:string">
-         <xs:pattern value="[#][a-fA-F0-9][a-fA-F0-9][a-fA-F0-9][a-fA-F0-9][a-fA-F0-9][a-fA-F0-9]"/>
-        </xs:restriction>
-      </xs:simpleType>
-    </xs:attribute>
-
-    <xs:attribute name="WidthPerLayer" type="xs:float" use="required"/>
-    <xs:attribute name="MaxWidth" type="xs:float" use="required"/>
-    <xs:attribute name="AvoidJellyfish" type="xs:boolean" use="required"/>
-    <xs:attribute name="MergeLinesAtSameLevel" type="xs:boolean" use="required"/>
-
-  </xs:complexType>
-
-  <!-- Definition of <Font> tag -->
-  <xs:complexType name="font">
-
-    <!-- Nested elements (none at present) -->
-    <xs:sequence>
-      <xs:choice minOccurs="0" maxOccurs="unbounded">
-        <xs:any minOccurs="0" processContents="skip"/>
-      </xs:choice>
-    </xs:sequence>
-
-    <!-- Attribute definitions -->
-    <xs:attribute name="Face" use="optional">
-      <xs:simpleType>
-        <xs:restriction base="xs:string">
-          <xs:enumeration value="Arial"/>
-          <xs:enumeration value="Times"/>
-          <xs:enumeration value="Calibri"/>
-          <xs:enumeration value="Impact"/>
-        </xs:restriction>
-      </xs:simpleType>
-    </xs:attribute>
-
-    <xs:attribute name="Weight" use="optional">
-      <xs:simpleType>
-        <xs:restriction base="xs:string">
-          <xs:enumeration value="Normal"/>
-          <xs:enumeration value="Bold"/>
-          <xs:enumeration value="Italic"/>
-          <xs:enumeration value="Underline"/>
-        </xs:restriction>
-      </xs:simpleType>
-    </xs:attribute>
-
-    <xs:attribute name="Size" type="xs:float" use="optional"/>
-
-    <xs:attribute name="Colour" use="optional">
-      <xs:simpleType>
-        <xs:restriction base="xs:string">
-         <xs:pattern value="[#][a-fA-F0-9][a-fA-F0-9][a-fA-F0-9][a-fA-F0-9][a-fA-F0-9][a-fA-F0-9]"/>
-        </xs:restriction>
-      </xs:simpleType>
-    </xs:attribute>
-
-  </xs:complexType>
-
-  <!-- Definition of <Graphic> tag -->
-  <xs:complexType name="graphic">
-
-    <!-- Nested elements (none at present) -->
-    <xs:sequence>
-      <xs:choice minOccurs="0" maxOccurs="unbounded">
-        <xs:any minOccurs="0" processContents="skip"/>
-      </xs:choice>
-    </xs:sequence>
-
-    <!-- Attribute definitions -->
-    <xs:attribute name="Default" type="xs:string" use="required"/>
-    <xs:attribute name="Ratio_50" type="xs:string" use="optional"/>
-    <xs:attribute name="Ratio_150" type="xs:string" use="optional"/>
-    <xs:attribute name="Hover" type="xs:string" use="optional"/>
-    <xs:attribute name="Selected" type="xs:string" use="optional"/>
-    <xs:attribute name="Disabled" type="xs:string" use="optional"/>
-
-  </xs:complexType>
-
-  <!-- Definition of <HotArea> tag -->
-  <xs:complexType name="hotarea">
-
-    <!-- Nested elements (none at present) -->
-    <xs:sequence>
-      <xs:choice minOccurs="0" maxOccurs="unbounded">
-        <xs:any minOccurs="0" processContents="skip"/>
-     </xs:choice>
-    </xs:sequence>
+  <!-- ROOT NODE: <psml> Definition -->
+  <xs:element name="psml">
+    <xs:complexType>
+      <!-- Nested Elements -->
+      <!-- No upper limit on number of Jellyfish (minimum=1) -->
+      <xs:sequence>
+        <xs:element minOccurs="1" maxOccurs="unbounded" ref="Jellyfish"/>     
+      </xs:sequence>
+      <!-- Attributes -->
+      <xs:attribute name="version" type="xs:int" use="required" />
+    </xs:complexType>
+  </xs:element>
   
-    <!-- Attribute definitions -->
+  <!-- <Jellyfish> Definition -->
+  <xs:element name="Jellyfish">
+    <xs:complexType>
+      <!-- Nested Elements -->
+      <xs:sequence>
+        <xs:element minOccurs="1" maxOccurs="unbounded" ref="Appearance"/>
+      </xs:sequence>
+      <!-- Attributes -->
+      <xs:attribute name="Name" type="xs:string" use="required"/>
+      <xs:attribute name="Type" use="required">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="Static"/>
+            <xs:enumeration value="Frozen"/>
+            <xs:enumeration value="Floating"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="Resizable" type="xs:boolean" use="required"/>  
+      <xs:attribute name="LockAspectRatioOnResize" type="xs:boolean" use="optional"/>      
+    </xs:complexType>
+  </xs:element>
+
+  <!-- <Appearance> Definition -->
+  <xs:element name="Appearance">
+    <xs:complexType>
+      <!-- Nested Elements -->
+      <!-- One (and only one) of EACH element MUST be present (in any order) -->
+      <xs:all>
+        <xs:element ref="Style"/>
+        <xs:element ref="BlackHole"/>
+        <xs:element ref="Resize"/>
+        <xs:element ref="Title"/>
+        <xs:element ref="Bungee"/>
+      </xs:all>
+      <!-- Attributes -->
+      <xs:attribute name="Status" use="required">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="Default"/>
+            <xs:enumeration value="Selected"/>
+            <xs:enumeration value="Alert"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="AspectRatio" use="required">
+        <xs:simpleType>
+          <xs:restriction base="xs:float">
+           <xs:minInclusive value="0.25"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="Spacing" type="xs:float" use="required"/>
+      <xs:attribute name="Mask" type="xs:string" use="required"/>      
+    </xs:complexType>
+  </xs:element>
+
+  <!-- <Style> Definition -->
+  <xs:element name="Style">
+    <xs:complexType>
+      <!-- Optional nested tag - can appear 1 or 0 times. -->
+      <xs:all minOccurs="0">
+        <xs:element ref="Graphic"/>
+      </xs:all>
+      <!-- Attributes -->
+      <xs:attribute name="Border" use="required">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="Solid"/>
+            <xs:enumeration value="Dotted"/>
+            <xs:enumeration value="Bold"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute> 
+      <xs:attribute name="FillColour" use="required">
+        <xs:simpleType>
+          <!-- Hex colour value e.g #0FF34A (either letter case allowed) -->
+          <xs:restriction base="xs:string">
+           <xs:pattern value="[#][a-fA-F0-9][a-fA-F0-9][a-fA-F0-9][a-fA-F0-9][a-fA-F0-9][a-fA-F0-9]"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- <BlackHole> Definition -->
+  <xs:element name="BlackHole">
+    <xs:complexType>
+      <!-- Optional nested tags - each can appear 1 or 0 times. -->
+      <xs:all minOccurs="0">
+        <xs:element ref="Graphic"/>
+        <xs:element ref="HotArea"/>
+      </xs:all> 
+      <!-- Attributes -->
+      <xs:attribute name="X" type="xs:float" use="required"/>
+      <xs:attribute name="Y" type="xs:float" use="required"/>
+      <xs:attribute name="Width" type="xs:float" use="required"/>
+      <xs:attribute name="Height" type="xs:float" use="required"/>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- <Resize> Definition -->
+  <xs:element name="Resize">
+    <xs:complexType>
+      <!-- Optional nested tags - each can appear 1 or 0 times. -->
+      <xs:all minOccurs="0">
+        <xs:element ref="Graphic"/>
+        <xs:element ref="HotArea"/>
+      </xs:all> 
+      <!-- Attributes -->
+      <xs:attribute name="MaxX" type="xs:float" use="required"/>
+      <xs:attribute name="MaxY" type="xs:float" use="required"/>
+      <xs:attribute name="Width" type="xs:float" use="required"/>
+      <xs:attribute name="Height" type="xs:float" use="required"/>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- <Title> Definition -->
+  <xs:element name="Title">
+  <xs:complexType>
+    <!-- Optional nested tags - each can appear 1 or 0 times. -->
+     <xs:all minOccurs="0">
+        <xs:element ref="Font"/>
+     </xs:all>  
+    <!-- Attributes -->
     <xs:attribute name="X" type="xs:float" use="required"/>
     <xs:attribute name="Y" type="xs:float" use="required"/>
     <xs:attribute name="Width" type="xs:float" use="required"/>
     <xs:attribute name="Height" type="xs:float" use="required"/>
-
-  </xs:complexType>
-
-  <!-- Definition of <BlackHole> tag -->
-  <xs:complexType name="blackhole">
-
-    <!-- Nested elements -->
-     <xs:sequence>
-      <xs:choice minOccurs="0" maxOccurs="unbounded">
-        <xs:element name="Graphic" type="graphic" minOccurs="0"/>
-        <xs:element name="HotArea" type="hotarea" minOccurs="0"/>
-        <xs:any minOccurs="0" processContents="skip"/>
-     </xs:choice>
-    </xs:sequence>
-     
-    <!-- Attribute definitions -->
-    <xs:attribute name="X" type="xs:float" use="required"/>
-    <xs:attribute name="Y" type="xs:float" use="required"/>
-    <xs:attribute name="Width" type="xs:float" use="required"/>
-    <xs:attribute name="Height" type="xs:float" use="required"/>
-
-  </xs:complexType>
-  
-  <!-- Definition of <Resize> tag -->
-  <xs:complexType name="resize">
-
-    <!-- Nested elements -->
-     <xs:sequence>
-      <xs:choice minOccurs="0" maxOccurs="unbounded">
-        <xs:element name="Graphic" type="graphic" minOccurs="0"/>
-        <xs:element name="HotArea" type="hotarea" minOccurs="0"/>
-        <xs:any minOccurs="0" processContents="skip"/>
-     </xs:choice>
-    </xs:sequence>
-
-    <!-- Attribute definitions -->
-    <xs:attribute name="MaxX" type="xs:float" use="required"/>
-    <xs:attribute name="MaxY" type="xs:float" use="required"/>
-    <xs:attribute name="Width" type="xs:float" use="required"/>
-    <xs:attribute name="Height" type="xs:float" use="required"/>
-
-  </xs:complexType>
-
-  <!-- Definition of <Title> tag -->
-   <xs:complexType name="title">
-
-    <!-- Nested elements -->
-     <xs:sequence>
-      <xs:choice minOccurs="0" maxOccurs="unbounded">
-        <xs:element name="Font" type="font" minOccurs="0"/>
-        <xs:any minOccurs="0" processContents="skip"/>
-     </xs:choice>
-    </xs:sequence>
-   
-    <!-- Attribute definitions -->
-    <xs:attribute name="X" type="xs:float" use="required"/>
-    <xs:attribute name="Y" type="xs:float" use="required"/>
-    <xs:attribute name="Width" type="xs:float" use="required"/>
-    <xs:attribute name="Height" type="xs:float" use="required"/>
-
     <xs:attribute name="Style" use="required">
       <xs:simpleType>
         <xs:restriction base="xs:string">
@@ -220,7 +151,6 @@
         </xs:restriction>
       </xs:simpleType>
     </xs:attribute>
-
     <xs:attribute name="HorizontalAlignment" use="required">
       <xs:simpleType>
         <xs:restriction base="xs:string">
@@ -230,7 +160,6 @@
         </xs:restriction>
       </xs:simpleType>
     </xs:attribute>
-
     <xs:attribute name="VerticalAlignment" use="required">
       <xs:simpleType>
         <xs:restriction base="xs:string">
@@ -240,143 +169,141 @@
         </xs:restriction>
       </xs:simpleType>
     </xs:attribute>
-
   </xs:complexType>
+  </xs:element>
 
-  <!-- Definition of <Bungee> tag -->
-   <xs:complexType name="bungee">
+  <!-- <Bungee> Definition -->
+  <xs:element name="Bungee">
+    <xs:complexType>
+      <!-- Optional nested tags - each can appear 1 or 0 times. -->
+      <xs:all minOccurs="0">
+        <xs:element ref="Connector"/>
+        <xs:element ref="Line"/>
+      </xs:all>
+      <!-- Attribute definitions -->
+      <!-- NONE -->
+    </xs:complexType>
+  </xs:element>
 
-    <!-- Nested elements -->
-     <xs:sequence>
-      <xs:choice minOccurs="0" maxOccurs="unbounded">
-        <xs:element name="Connector" type="connector" minOccurs="0"/>
-        <xs:element name="Line" type = "line" minOccurs="0"/>
-        <xs:any minOccurs="0" processContents="skip"/>
-     </xs:choice>
-    </xs:sequence>
+  <!-- <Graphic> Definition -->
+  <xs:element name="Graphic">
+    <xs:complexType>
+      <!-- Nested elements -->
+      <!-- NONE -->
+      <!-- Attributes -->
+      <xs:attribute name="Default" type="xs:string" use="required"/>
+      <xs:attribute name="Ratio_50" type="xs:string" use="optional"/>
+      <xs:attribute name="Ratio_150" type="xs:string" use="optional"/>
+      <xs:attribute name="Hover" type="xs:string" use="optional"/>
+      <xs:attribute name="Selected" type="xs:string" use="optional"/>
+      <xs:attribute name="Disabled" type="xs:string" use="optional"/>
+    </xs:complexType>
+  </xs:element>
 
-    <!-- Attribute definitions -->
-    <!-- NONE -->
+  <!-- <HotArea> Definition -->
+  <xs:element name="HotArea">
+    <xs:complexType>
+      <!-- Nested elements (none at present) -->   
+      <!-- NONE -->  
+      <!-- Attribute definitions -->
+      <xs:attribute name="X" type="xs:float" use="required"/>
+      <xs:attribute name="Y" type="xs:float" use="required"/>
+      <xs:attribute name="Width" type="xs:float" use="required"/>
+      <xs:attribute name="Height" type="xs:float" use="required"/>
+    </xs:complexType>
+  </xs:element>
 
-  </xs:complexType>
+  <!-- <Font> Definition -->
+  <xs:element name="Font">
+    <xs:complexType>
+      <!-- Nested elements -->
+      <!-- NONE -->
+      <!-- Attributes -->
+      <xs:attribute name="Face" use="optional">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="Arial"/>
+            <xs:enumeration value="Times"/>
+            <xs:enumeration value="Calibri"/>
+            <xs:enumeration value="Impact"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="Weight" use="optional">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="Normal"/>
+            <xs:enumeration value="Bold"/>
+            <xs:enumeration value="Italic"/>
+            <xs:enumeration value="Underline"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="Size" type="xs:float" use="optional"/>
+      <xs:attribute name="Colour" use="optional">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:pattern value="[#][a-fA-F0-9][a-fA-F0-9][a-fA-F0-9][a-fA-F0-9][a-fA-F0-9][a-fA-F0-9]"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+    </xs:complexType>
+  </xs:element>
 
-  <!-- Definition of <Style> tag -->
-  <xs:complexType name="style">
 
-    <!-- Nested elements -->
-    <xs:sequence>
-      <xs:choice minOccurs="0" maxOccurs="unbounded">
-        <xs:element name="Graphic" type="graphic" minOccurs="0"/>
-        <xs:any minOccurs="0" processContents="skip"/>
-     </xs:choice>
-    </xs:sequence>
+  <!-- <Connector> Definition -->
+  <xs:element name="Connector">
+    <xs:complexType>
+      <!-- Optional nested tags - each can appear 1 or 0 times. -->
+      <xs:all minOccurs="0">
+        <xs:element ref="Marker"/>
+      </xs:all>
+      <!-- Attributes-->
+      <xs:attribute name="Type" use="required">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="Start"/>
+            <xs:enumeration value="Stop"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="X" type="xs:float" use="required"/>
+      <xs:attribute name="Y" type="xs:float" use="required"/>
+      <xs:attribute name="Width" type="xs:float" use="required"/>
+      <xs:attribute name="Height" type="xs:float" use="required"/>
+    </xs:complexType>
+  </xs:element>
 
-    <!-- Attribute definitions -->
-    <xs:attribute name="Border" use="required">
-      <xs:simpleType>
-        <xs:restriction base="xs:string">
-          <xs:enumeration value="Solid"/>
-          <xs:enumeration value="Dotted"/>
-          <xs:enumeration value="Bold"/>
-        </xs:restriction>
-      </xs:simpleType>
-    </xs:attribute>
-    
-    <xs:attribute name="FillColour" use="required">
-      <xs:simpleType>
-        <xs:restriction base="xs:string">
-         <xs:pattern value="[#][a-fA-F0-9][a-fA-F0-9][a-fA-F0-9][a-fA-F0-9][a-fA-F0-9][a-fA-F0-9]"/>
-        </xs:restriction>
-      </xs:simpleType>
-    </xs:attribute>
+  <!-- <Line> Definition -->
+  <xs:element name="Line">
+    <xs:complexType>
+      <!-- Nested elements -->
+      <!-- NONE -->
+      <!-- Attributes -->
+      <xs:attribute name="Colour" use="optional">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+           <xs:pattern value="[#][a-fA-F0-9][a-fA-F0-9][a-fA-F0-9][a-fA-F0-9][a-fA-F0-9][a-fA-F0-9]"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="WidthPerLayer" type="xs:float" use="required"/>
+      <xs:attribute name="MaxWidth" type="xs:float" use="required"/>
+      <xs:attribute name="AvoidJellyfish" type="xs:boolean" use="required"/>
+      <xs:attribute name="MergeLinesAtSameLevel" type="xs:boolean" use="required"/>
+    </xs:complexType>
+  </xs:element>
 
-  </xs:complexType>
-  
-  <!-- Definition of <Appearance> tag -->
-  <xs:complexType name="appearance">
-    
-    <!-- Nested elements -->
-    <xs:sequence>
-      <xs:choice minOccurs="0" maxOccurs="unbounded">
-        <xs:element name="Style" type="style" minOccurs="0"/>
-        <xs:element name="BlackHole" type="blackhole" minOccurs="0"/>
-        <xs:element name="Resize" type="resize" minOccurs="0"/>
-        <xs:element name="Title" type="title" minOccurs="0"/>
-        <xs:element name="Bungee" type="bungee" minOccurs="0"/>
-	<xs:any minOccurs="0" processContents="skip"/>
-     </xs:choice>
-    </xs:sequence>
-  
-    <!-- Attribute definitions -->
-    <xs:attribute name="Status" use="required">
-      <xs:simpleType>
-        <xs:restriction base="xs:string">
-          <xs:enumeration value="Default"/>
-          <xs:enumeration value="Selected"/>
-          <xs:enumeration value="Alert"/>
-        </xs:restriction>
-      </xs:simpleType>
-    </xs:attribute>
-    
-    <xs:attribute name="AspectRatio" use="required">
-      <xs:simpleType>
-        <xs:restriction base="xs:float">
-         <xs:minInclusive value="0.25"/>
-        </xs:restriction>
-      </xs:simpleType>
-    </xs:attribute>
-    
-    <xs:attribute name="Spacing" type="xs:float" use="required"/>
-    <xs:attribute name="Mask" type="xs:string" use="required"/>
- 
-  </xs:complexType>
-
-  <!-- Definition of <Jellyfish> tag -->
-  <xs:complexType name="jellyfish">
-    
-    <!-- Nested elements -->
-    <xs:sequence>
-     <xs:choice minOccurs="0" maxOccurs="unbounded">
-        <xs:element name="Appearance" type="appearance" minOccurs="1"/>
-        <xs:any minOccurs="0" processContents="skip"/>
-     </xs:choice>
-    </xs:sequence>
-    
-    <!-- Attribute definitions -->
-    <xs:attribute name="Name" type="xs:string" use="required"/>
-   
-    <xs:attribute name="Type" use="required">
-      <xs:simpleType>
-        <xs:restriction base="xs:string">
-          <xs:enumeration value="Static"/>
-          <xs:enumeration value="Frozen"/>
-          <xs:enumeration value="Floating"/>
-        </xs:restriction>
-      </xs:simpleType>
-    </xs:attribute>
-    
-    <xs:attribute name="Resizable" type="xs:boolean" use="required"/>  
-    <xs:attribute name="LockAspectRatioOnResize" type="xs:boolean" use="optional"/>
-  
-  </xs:complexType>
-
-  <!-- Definition of <psml> tag -->
-  <xs:complexType name="psmltype">
-    
-    <!-- Nested element <Jellyfish> must occur at least once -->
-    <xs:sequence>
-      <xs:choice minOccurs="0" maxOccurs="unbounded">
-        <xs:element name="Jellyfish" type="jellyfish" minOccurs="1"/>
-        <xs:any minOccurs="0" processContents="skip"/>
-     </xs:choice>
-    </xs:sequence>
-    
-    <!-- Optional version attribute -->
-    <xs:attribute name="Version" type="xs:string" use="optional"/>
- 
-  </xs:complexType>
-
-  <!-- Declaration of root <psml> element -->
-  <xs:element name="psml" type="psmltype"/>
+  <!-- <Marker> Definition -->
+  <xs:element name="Marker">
+    <xs:complexType>
+      <!-- Nested elements -->
+      <!-- NONE -->
+      <!-- Attributes-->
+      <xs:attribute name="Width" type="xs:float" use="required"/>
+      <xs:attribute name="Height" type="xs:float" use="required"/>
+      <xs:attribute name="Graphic" type="xs:string" use="required"/>
+    </xs:complexType>
+  </xs:element>
 
 </xs:schema>
