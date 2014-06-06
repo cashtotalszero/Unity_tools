@@ -13,10 +13,13 @@ public class MethodCalls : MonoBehaviour {
 	const int PIXE_OCEAN_UNSET = 0;
 	const int PIXE_OCEAN_DEFAULT_DROP = 1;
 
-	const int NAME = 0;
-	const int TYPE = 1;
-	const int VALUE = 2;
-	const int DATA = 3;
+	const int PIXE_OCEAN_MOLECULE_NAME = 0;
+	const int PIXE_OCEAN_MOLECULE_TYPE = 1;
+	const int PIXE_OCEAN_MOLECULE_VALUE = 2;
+	const int PIXE_OCEAN_MOLECULE_DATA = 3;
+
+	const int PIXE_OCEAN_SESSION_POINTER = 0;
+
 	//gsOcean
 	private string[,] ocean;
 	private long[,] sessions;
@@ -31,56 +34,48 @@ public class MethodCalls : MonoBehaviour {
 		//Debug.Log ("Session num: " + thisSession);
 
 		int i;
-		Write (thisSession, "A", "A", PIXE_PSML_ELEMENT);
+		Write (thisSession, "A", null, PIXE_PSML_ELEMENT);
 		Debug.Log ("ONE:");
 		for (i=0; i<8; i++) {
-			Debug.Log("NAME: " +ocean[i,NAME] +
-			          " TYPE: " +ocean[i,TYPE] +
-			          " VALUE: " +ocean[i,VALUE] +
-			          " DATA: " +ocean[i,DATA]);
+			Debug.Log("NAME: " +ocean[i,PIXE_OCEAN_MOLECULE_NAME] +
+			          " TYPE: " +ocean[i,PIXE_OCEAN_MOLECULE_TYPE] +
+			          " VALUE: " +ocean[i,PIXE_OCEAN_MOLECULE_VALUE] +
+			          " DATA: " +ocean[i,PIXE_OCEAN_MOLECULE_DATA]);
 			
 		}
 
-		Write (thisSession, "A", "B", PIXE_PSML_ELEMENT);
+		Write (thisSession, "B", null, PIXE_PSML_ELEMENT);
 		Debug.Log ("TWO:");
 		for (i=0; i<8; i++) {
-			Debug.Log("NAME: " +ocean[i,NAME] +
-			          " TYPE: " +ocean[i,TYPE] +
-			          " VALUE: " +ocean[i,VALUE] +
-			          " DATA: " +ocean[i,DATA]);
+			Debug.Log("NAME: " +ocean[i,PIXE_OCEAN_MOLECULE_NAME] +
+			          " TYPE: " +ocean[i,PIXE_OCEAN_MOLECULE_TYPE] +
+			          " VALUE: " +ocean[i,PIXE_OCEAN_MOLECULE_VALUE] +
+			          " DATA: " +ocean[i,PIXE_OCEAN_MOLECULE_DATA]);
 			
 		}
 
-		Write (thisSession, "B", "C", PIXE_PSML_ELEMENT);
+		Move (thisSession, "B");
+
+		Write (thisSession, "C", null, PIXE_PSML_ELEMENT);
 		Debug.Log ("THREE:");
 		for (i=0; i<8; i++) {
-			Debug.Log("NAME: " +ocean[i,NAME] +
-			          " TYPE: " +ocean[i,TYPE] +
-			          " VALUE: " +ocean[i,VALUE] +
-			          " DATA: " +ocean[i,DATA]);
+			Debug.Log("NAME: " +ocean[i,PIXE_OCEAN_MOLECULE_NAME] +
+			          " TYPE: " +ocean[i,PIXE_OCEAN_MOLECULE_TYPE] +
+			          " VALUE: " +ocean[i,PIXE_OCEAN_MOLECULE_VALUE] +
+			          " DATA: " +ocean[i,PIXE_OCEAN_MOLECULE_DATA]);
 			
 		}
 
-		Write (thisSession, "B", "D", PIXE_PSML_ELEMENT);
+		Write (thisSession, "D", null, PIXE_PSML_ELEMENT);
 		Debug.Log ("FOUR:");
 		for (i=0; i<8; i++) {
-			Debug.Log("NAME: " +ocean[i,NAME] +
-			" TYPE: " +ocean[i,TYPE] +
-			" VALUE: " +ocean[i,VALUE] +
-			" DATA: " +ocean[i,DATA]);
+			Debug.Log("NAME: " +ocean[i,PIXE_OCEAN_MOLECULE_NAME] +
+			          " TYPE: " +ocean[i,PIXE_OCEAN_MOLECULE_TYPE] +
+			          " VALUE: " +ocean[i,PIXE_OCEAN_MOLECULE_VALUE] +
+			          " DATA: " +ocean[i,PIXE_OCEAN_MOLECULE_DATA]);
 
 		}
 
-		/*
-		ocean = insertOceanRow (1);
-		Debug.Log ("UPDATED:");
-		for (i=0; i<5; i++) {
-			Debug.Log("NAME: " +ocean[i,NAME] +
-			          " TYPE: " +ocean[i,TYPE] +
-			          " VALUE: " +ocean[i,VALUE] +
-			          " DATA: " +ocean[i,DATA]);
-			
-		}*/
 	}
 
 	public long Initialise(long lFlags) {
@@ -114,7 +109,7 @@ public class MethodCalls : MonoBehaviour {
 	public long Write(long lSession, string sPath, object oValue, long lFlags){
 
 		// 1) Retrieve the session pointer from the session array
-		long sessionPointer = sessions [lSession, 0];
+		long sessionPointer = sessions [lSession, PIXE_OCEAN_SESSION_POINTER];
 		// CHECK PRIVILEDGES HERE - do they have write access? - return error if not
 
 		// Remove any leading/trailing spaces from the path
@@ -154,172 +149,47 @@ public class MethodCalls : MonoBehaviour {
 			long elementOrigin;					// Index of nested element declaration
 			
 			// If session pointer  is on a free slot, write element into it (only used once for empty oceans)
-			// PIXE_OCEAN_POOL_TYPE, PIXE_OCEAN_SESSION_...
-			if (ocean [sessionPointer, TYPE] == "") {
-				ocean [sessionPointer, NAME] = oValue.ToString ();
-				ocean [sessionPointer, TYPE] = "H";
-				ocean [sessionPointer, VALUE] = "1";
-				ocean [sessionPointer, DATA] = currentHeader.ToString();
+			if (ocean [sessionPointer, PIXE_OCEAN_MOLECULE_TYPE] == "") {
+				if (lFlags == PIXE_PSML_ELEMENT) {
+					createMolecule(
+						sessionPointer, sessionPointer,
+						sPath, "H", "0", currentHeader.ToString()
+						);
+				}
+				else if  (lFlags == PIXE_PSML_ATTRIBUTE){
+					Debug.Log("ERROR = Unable to write Attribute without a parent element");
+				}
+			
 				// Note: Session pointer does not move in this case
 				return lFlags;
 			}
 
 			// Find the current Drop Header location
 			currentHeader = sessionPointer;
-			while (ocean[currentHeader,TYPE] != "H") {
+			while (ocean[currentHeader,PIXE_OCEAN_MOLECULE_TYPE] != "H") {
 				currentHeader--;
 			}
 
 			// If SP is on an Attribute, move it to the Header:
-			if(ocean[sessionPointer,TYPE] == "A") {
+			if(ocean[sessionPointer,PIXE_OCEAN_MOLECULE_TYPE] == "A") {
 				sessionPointer = currentHeader;
 			}
-
-			// If SP is on an Element, create a Header for the Element (if it doesn't already exist)
-			if(ocean[sessionPointer,TYPE] == "E") {
-
-				// Check path is valid - must reference same Element as SP or its header
-				if(sPath != ocean[sessionPointer,NAME] && sPath != ocean[currentHeader,NAME]) {
-					Debug.Log("ERROR = Invalid Path provided. Element does not exist in current location.");
-					return lFlags;
-				}
-
-				// To add elements to NESTED elements:
-				if(sPath == ocean[sessionPointer,NAME]) {
-
-					// Create a Header for the nested element if needed
-					if(ocean [sessionPointer,VALUE] == PIXE_OCEAN_UNSET.ToString ()) {
-
-						// 1) Save the nested Element reference orgin & find somewhere to put the new Header
-						elementOrigin = sessionPointer;
-						sessionPointer = getDrop(sessionPointer);
-
-						// 2) Write the Header data (including the offset to its parent)
-						ocean[sessionPointer,NAME] = ocean[elementOrigin,NAME];
-						ocean [sessionPointer, TYPE] = "H";
-						ocean [sessionPointer, VALUE] = "1";
-						ocean[sessionPointer,DATA] = (currentHeader - sessionPointer).ToString ();
-
-						// 3) Update the offset value in the parent element molecule
-						ocean [elementOrigin,VALUE] = (sessionPointer - elementOrigin).ToString();
-
-						// 4) Move current header to newlt created header
-						currentHeader = sessionPointer;
-					}
-					// Else, move the SP to the correct header
-					else {
-						sessionPointer = sessionPointer + Convert.ToInt64(ocean [sessionPointer,VALUE]);
-					}
-			
-				}
-			}
 			// Get the current Drop size...
-			elementSize = Convert.ToInt64 (ocean [currentHeader, VALUE]);
+			elementSize = Convert.ToInt64 (ocean [currentHeader, PIXE_OCEAN_MOLECULE_VALUE]);
 
 			// ...then add the nested element details to the end of the current Drop
-			ocean [(currentHeader + elementSize), NAME] = oValue.ToString ();
-			ocean [(currentHeader + elementSize), TYPE] = "E";
-			ocean [(currentHeader + elementSize), VALUE] = PIXE_OCEAN_UNSET.ToString ();
-
+			createMolecule(
+				(currentHeader + elementSize), currentHeader, 
+				sPath, "E", PIXE_OCEAN_UNSET.ToString (), ""
+				);
+		
 			// Move the session point to the newly written record
 			sessionPointer = currentHeader + elementSize;
 
-			// Increase the size of the current Drop to reflect the new addtion
-			long update = Convert.ToInt64 (ocean [currentHeader, VALUE]);
-			update = update +1;
-			ocean [currentHeader, VALUE] = update.ToString();
-
 			// Save the position of the SP
-			sessions [lSession, 0] = sessionPointer;
+			sessions [lSession, PIXE_OCEAN_SESSION_POINTER] = sessionPointer;
 		}
-
-			/*
-	
-			long i;						// counter
-			long writeTo = 0;			// Index of cell to write new element to
-		
-			// Ensure the nested element doesn't already exist
-			for(i=1;i<elementSize;i++) {
-				if(ocean[sessionPointer + i,TYPE] == "E") 
-				{
-					if(ocean[sessionPointer+i,NAME] == oValue.ToString())
-					{
-						Debug.Log("Nested element '" + oValue.ToString() + "' already exists.");
-						return sessionReset;
-					}
-				}
-			}
-
-			// 1) Add the nested element details to the end of element
-
-			// First Ensure there is free space at end of element - if not, insert a free row 
-			if(ocean[(sessionPointer + elementSize),NAME] != "") {
-				ocean = insertOceanRow((sessionPointer + elementSize));
-			}
-			// Write the nested element Name and Type to this row
-			ocean[(sessionPointer + elementSize),NAME]	= oValue.ToString();
-			ocean[(sessionPointer + elementSize),TYPE]	= "E";
-
-				// 2) Search for some free space to store the new header
-				if(ocean[writeTo,VALUE] != "") {
-					while(writeTo<ocean.GetLength(0)) {
-						// Break out of loop when a free slot is found
-						if (ocean[writeTo,NAME] == "") {
-							break;
-						}
-						else {
-							writeTo++;
-						}
-					}
-				}
-
-				// 3) Update the nested element details to include offset to its header
-				offsetToHeader = writeTo - (sessionPointer + elementSize);
-				ocean[(sessionPointer + elementSize),VALUE]	= offsetToHeader.ToString();
-					
-				// 4) Update the element size in the header to include the new record
-				ocean[sessionPointer,VALUE]	= (elementSize + 1).ToString();
-
-				// 5) Get the offset to parent value for the new location
-				offsetToParent = (sessionPointer - writeTo);
-
-				// 6) Move the session pointer to the new location & write new header
-				sessions[sessionPointer,0] = writeTo;
-				ocean[sessionPointer,NAME]	= oValue.ToString();
-				ocean[sessionPointer,TYPE]	= "H";
-				ocean[sessionPointer,VALUE]	= "1";
-				ocean[sessionPointer,DATA]	= offsetToParent.ToString();
-
-		}
-		else if(lFlags == ATTRIBUTE) {
-
-				// WRITE ATTRIBUTE
-
-		}
-
-			/*
-			 * CHECK FLAGS - attribute or element?
-			 * 
-			 * SEARCH CURRENT HEADER FOR NAMED ATT OR ELEMENT:
-			 * 
-			 * if (FOUND) {
-			 * 			OVERWRITE
-			 * 		}
-			 * 		else {
-			 * 			CREATE NEW
-			 * 			- CHECK FOR FREE SPACE IN OCEAN
-			 * 			- IF SPACE WRITE IT IN
-			 * 			- IF NOT, COPY INTO A NEW OCEAN WHERE MOVING ITEMS APPROPRIATELY
-			 * 			- NOTE OFFSETS etc will need to be updated accordingly
-			 * 		}
-			 * 
-			 * 
-			 * */
-
-		
-	
-		// Return success code 
-		//Debug.Log ("Amended session = " + sessionPointer);
+ 
 		return lFlags;
 	}
 	
@@ -370,40 +240,84 @@ public class MethodCalls : MonoBehaviour {
 		return /*i*/5;
 	}
 
-
-
-	private string[,] insertOceanRow(long rowNum)
+	private void createMolecule(long lLocation, long lHeader, string sName, string sType, string sValue, string sData)
 	{
-		long sizeX = ocean.GetLength (0);
-		long sizeY = ocean.GetLength (1);
-		string[,] newOcean = new string[sizeX,sizeY];
-		long i,j;
+		// Write all the molecule information into Ocean
+		ocean [lLocation,PIXE_OCEAN_MOLECULE_NAME] = sName;
+		ocean [lLocation, PIXE_OCEAN_MOLECULE_TYPE] = sType;
+		ocean [lLocation, PIXE_OCEAN_MOLECULE_VALUE] = sValue;
+		ocean [lLocation,PIXE_OCEAN_MOLECULE_DATA] = sData;
 
-		// 1) Ensure that there is a free space at the end of the ocean to move everything into
-		if (ocean [sizeX-1, 0] != "") {
-			// EXPAND THE OCEAN IF NO FREE AT END
-		}
-
-		// 2 Copy all rows before the row to insert
-		for (i=0; i<rowNum; i++) {
-			for (j=0; j<sizeY; j ++) {
-				newOcean [i, j] = ocean [i, j];
-			}
-		}
-
-		// 3) Set the new free row
-		for (j=0; j<sizeY; j++) {
-			newOcean[rowNum,j] = "";
-		}
-
-		// 4) Copy all rows after the inserted row
-		for (i=rowNum; i<sizeX-1; i++) {
-			for (j=0; j<sizeY; j++) {
-				newOcean [i+1, j] = ocean [i, j];
-				// REMEMBER TO UPDATE OFFSETS
-			}
-		}
-	    // 5) Return a copy of the new ocean
-		return newOcean;
+		// Update the size of the Drop header to reflect new addtion
+		long update = Convert.ToInt64 (ocean [lHeader, PIXE_OCEAN_MOLECULE_VALUE]);
+		update = update + 1;
+		ocean [lHeader, PIXE_OCEAN_MOLECULE_VALUE] = update.ToString();
+		return;
 	}
+
+	private long createNested(long lCursor, long lParentHeader)
+	{
+		// Save the nested Element reference orgin & find somewhere to put the new Header
+		long lOrigin = lCursor;
+		lCursor = getDrop(lCursor);
+		
+		// Write the Header data
+		createMolecule(
+			lCursor, lCursor, 
+			ocean[lOrigin,PIXE_OCEAN_MOLECULE_NAME], "H", "0", (lParentHeader - lCursor).ToString ()
+			);	
+		// Update the offset value in the parent element molecule to point to this Header
+		ocean [lOrigin,PIXE_OCEAN_MOLECULE_VALUE] = (lCursor - lOrigin).ToString();
+
+		// Return the new Cursor location
+		return lCursor;
+	}
+
+	public void Move(long lSession, string sDestination) 
+	{
+		// Retrieve the session pointer from the session array
+		long lCursor = sessions [lSession, PIXE_OCEAN_SESSION_POINTER];
+	
+		// MOVE UP WITH ".." NEEDS TO GO HERE
+
+		// Move the cursor to the current Drop Header location
+		while (ocean[lCursor,PIXE_OCEAN_MOLECULE_TYPE] != "H") {
+			lCursor--;
+		}
+		long lHeader = lCursor;				// Save this header location (for use in child Header)
+
+		// Get the size of the current Drop & set found flag to false
+		long lLimit = Convert.ToInt64 (ocean [lCursor, PIXE_OCEAN_MOLECULE_VALUE]);
+
+		// Search for Element/Attribute matching the requested destination
+		bool bFound = false;
+		while (lCursor < lLimit) {
+			if(ocean[lCursor,PIXE_OCEAN_MOLECULE_NAME] == sDestination ) {
+				bFound = true;
+				break;
+			}
+			lCursor++;
+		}
+		// Display error if destination not found in current Drop
+		if (!bFound) {
+			Debug.Log("ERROR = Unable to move cursor. No matching record found in current location.");
+			return;
+		}
+		// When moving into nested elements:
+		if(ocean [lCursor,PIXE_OCEAN_MOLECULE_TYPE] == "E") {
+			// Create a Drop Header if one doesn't already exist
+			if(ocean [lCursor,PIXE_OCEAN_MOLECULE_VALUE] == PIXE_OCEAN_UNSET.ToString ()) {
+				lCursor = createNested(lCursor, lHeader);
+			}
+			// Else, move the currsor to the correct header.
+			else {
+				lCursor = lCursor + Convert.ToInt64(ocean [lCursor,PIXE_OCEAN_MOLECULE_VALUE]);
+			}
+		}
+		// Update the postion of the session cursor
+		sessions [lSession, PIXE_OCEAN_SESSION_POINTER] = lCursor;
+		return;
+	}
+
+	// MOVE DROP FUNCTION NEEDED
 }
