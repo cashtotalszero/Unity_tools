@@ -18,7 +18,8 @@ public class MethodCalls : MonoBehaviour {
 	const int PIXE_OCEAN_MOLECULE_VALUE = 2;
 	const int PIXE_OCEAN_MOLECULE_DATA = 3;
 
-	const int PIXE_OCEAN_SESSION_POINTER = 0;
+	const int PIXE_OCEAN_SESSION_CURSOR = 0;
+	const int PIXE_OCEAN_SESSION_PRIVILEGES = 1;
 
 	//gsOcean
 	private string[,] ocean;
@@ -31,42 +32,20 @@ public class MethodCalls : MonoBehaviour {
 
 		thisSession = Initialise (1);
 		anotherSession = Initialise (1);
-		//Debug.Log ("Session num: " + thisSession);
 
 		int i;
 		Write (thisSession, "A", null, PIXE_PSML_ELEMENT);
-		Debug.Log ("ONE:");
-		for (i=0; i<8; i++) {
-			Debug.Log("NAME: " +ocean[i,PIXE_OCEAN_MOLECULE_NAME] +
-			          " TYPE: " +ocean[i,PIXE_OCEAN_MOLECULE_TYPE] +
-			          " VALUE: " +ocean[i,PIXE_OCEAN_MOLECULE_VALUE] +
-			          " DATA: " +ocean[i,PIXE_OCEAN_MOLECULE_DATA]);
-			
-		}
 
 		Write (thisSession, "B", null, PIXE_PSML_ELEMENT);
-		Debug.Log ("TWO:");
-		for (i=0; i<8; i++) {
-			Debug.Log("NAME: " +ocean[i,PIXE_OCEAN_MOLECULE_NAME] +
-			          " TYPE: " +ocean[i,PIXE_OCEAN_MOLECULE_TYPE] +
-			          " VALUE: " +ocean[i,PIXE_OCEAN_MOLECULE_VALUE] +
-			          " DATA: " +ocean[i,PIXE_OCEAN_MOLECULE_DATA]);
-			
-		}
 
-		Move (thisSession, "B");
+		//Move (thisSession, "B");
 
-		Write (thisSession, "Att", "Alex", PIXE_PSML_ATTRIBUTE);
-		Debug.Log ("THREE:");
-		for (i=0; i<8; i++) {
-			Debug.Log("NAME: " +ocean[i,PIXE_OCEAN_MOLECULE_NAME] +
-			          " TYPE: " +ocean[i,PIXE_OCEAN_MOLECULE_TYPE] +
-			          " VALUE: " +ocean[i,PIXE_OCEAN_MOLECULE_VALUE] +
-			          " DATA: " +ocean[i,PIXE_OCEAN_MOLECULE_DATA]);
-			
-		}
-		Move (thisSession, "..");
-		Write (thisSession, "D", null, PIXE_PSML_ELEMENT);
+		Write (thisSession, "C", "Null", PIXE_PSML_ELEMENT);
+
+		//Move (thisSession, "..");
+		//Write (thisSession, "psml://A/B", null, PIXE_PSML_ELEMENT);
+		Write (thisSession, "psml://A/C/Emma", null, PIXE_PSML_ELEMENT);
+		Write (thisSession, "psml://A/Alex", null, PIXE_PSML_ELEMENT);
 		Debug.Log ("FOUR:");
 		for (i=0; i<8; i++) {
 			Debug.Log("NAME: " +ocean[i,PIXE_OCEAN_MOLECULE_NAME] +
@@ -93,8 +72,8 @@ public class MethodCalls : MonoBehaviour {
 		for (i=0; i<length; i++) {
 
 			// If free slot is found, set it to home them return the index
-			if(sessions[i,0] == PIXE_OCEAN_FREE) {
-				sessions[i,0] = PIXE_OCEAN_HOME;
+			if(sessions[i,PIXE_OCEAN_SESSION_CURSOR] == PIXE_OCEAN_FREE) {
+				sessions[i,PIXE_OCEAN_SESSION_CURSOR] = PIXE_OCEAN_HOME;
 				/*
 				 * SET PRIVLEDGES HERE - according to lFlags
 				 * */
@@ -105,11 +84,55 @@ public class MethodCalls : MonoBehaviour {
 		return PIXE_ERROR;
 	}
 
-	public long Write(long lSession, string sPath, object oValue, long lFlags){
 
-		// 1) Retrieve the session pointer from the session array
-		long lCursor = sessions [lSession, PIXE_OCEAN_SESSION_POINTER];
-		// CHECK PRIVILEDGES HERE - do they have write access? - return error if not
+	// PreparePath() = for write, checks if attributes/elements already exist 
+	private string[] processPath(string sPath)
+	{
+		// Remove the "psml//:" marker...
+		sPath = sPath.Remove(0,7);
+		
+		// ...and the last "/" (if present)
+		if (sPath.EndsWith("/")) {
+			sPath = sPath.Substring (0, sPath.Length - 1);
+		}
+
+		// Split the path string at each "/" and place tokenised strings into an array
+		string[] splitPath = sPath.Split ('/');
+		return splitPath;
+	}
+
+
+
+	private bool navigatePath(long lSession, string [] sPathArray/*, long lFlags*/) 
+	{
+		// Save current cursor location in case of error
+		long lCursorReset = sessions [lSession, PIXE_OCEAN_SESSION_CURSOR];
+
+		// Set the session cursor to Home (the root node)
+		sessions [lSession, PIXE_OCEAN_SESSION_CURSOR] = PIXE_OCEAN_HOME;
+
+		// Attempt to move cursor to provided path
+		int i=0, depth = sPathArray.GetLength(0);
+		bool bFound = true;
+		while(i<depth && bFound == true) {
+			bFound = Move (lSession, sPathArray[i]);
+			i++;
+		}
+		// Return sucess flag if path is successfully navigated
+		if(i==depth) {
+			return true;
+		}
+		// Reset cursor to original location if path is invalid & return false
+		sessions [lSession, PIXE_OCEAN_SESSION_CURSOR] = lCursorReset;
+		return false;
+	}
+
+		// Move the cursor and put back in sessions
+		// Return the updated path
+
+	public long Write(long lSession, string sPath, object oValue, long lFlags)
+	{
+		long lCursorReset = sessions [lSession, PIXE_OCEAN_SESSION_CURSOR];
 
 		// Remove any leading/trailing spaces from the path
 		sPath = sPath.Trim ();
@@ -117,23 +140,25 @@ public class MethodCalls : MonoBehaviour {
 		// 2) Syntax check for provided sPath (ABSOLUTE)
 		if (sPath.StartsWith ("psml://")) {
 
-			// Remove the "psml//:" marker
-			sPath = sPath.Remove(0,7);
-			Debug.Log(sPath);
-			// NOTE - trailing spaces and the final / may need to be trimmed also
+			string[]sPathArray = processPath(sPath);
+			// Amend path to the attribute/element to write (i.e. the last one)
+			sPath = sPathArray[(sPathArray.GetLength(0)-1)];
 
-			// Split the string at each "/" and place tokenised strings into an array
-			string[] splitPath = sPath.Split ('/');
-
-			foreach (string tag in splitPath) {
-				/*
-				 * sessionPointer = NAVIGATE TO CORRECT HEADER TAG IN OCEAN
-				 * 
-				 * if NOT FOUND && NOT AT END OF LOOP - return ERROR
-				 *
-				 * */
+			// For elements to write, set path array to it's parent
+			if(lFlags == PIXE_PSML_ELEMENT) {
+				Array.Resize(ref sPathArray, sPathArray.Length-1);
+			}
+			// Navigate to the path (return if fails)
+			if(!navigatePath(lSession, sPathArray)) {
+				return lFlags;
 			}
 		} 
+
+		// 1) Retrieve the session pointer from the session array
+		long lCursor = sessions [lSession, PIXE_OCEAN_SESSION_CURSOR];
+
+		// CHECK PRIVILEDGES HERE - do they have write access? - return error if not
+
 		// 3) Syntax check for provided sPath (RELATIVE)
 		long lDropSize = 0;				// Size of the current drop
 			
@@ -146,6 +171,7 @@ public class MethodCalls : MonoBehaviour {
 			}
 			else if  (lFlags == PIXE_PSML_ATTRIBUTE){
 				Debug.Log("ERROR = Unable to write Attribute without a parent element");
+
 			}
 			// Note: Session pointer does not move in this case
 			return lFlags;
@@ -156,6 +182,9 @@ public class MethodCalls : MonoBehaviour {
 		}
 		// Get the current Drop size and add the Attribute/Element details to the end
 		lDropSize = Convert.ToInt64 (ocean [lCursor, PIXE_OCEAN_MOLECULE_VALUE]);
+
+		// NEED CHECK TO SEE IF ATT/EL ALREADY EXISTS
+
 		if (lFlags == PIXE_PSML_ELEMENT) {
 			createMolecule(
 				(lCursor + lDropSize), lCursor, 
@@ -168,7 +197,7 @@ public class MethodCalls : MonoBehaviour {
 		}
 		// Move the cursor to the newly written record and save in sessions array
 		lCursor = lCursor + lDropSize;
-		sessions [lSession, PIXE_OCEAN_SESSION_POINTER] = lCursor;
+		sessions [lSession, PIXE_OCEAN_SESSION_CURSOR] = lCursor;
 		return lFlags;
 	}
 	
@@ -222,10 +251,10 @@ public class MethodCalls : MonoBehaviour {
 	private void createMolecule(long lLocation, long lHeader, string sName, string sType, string sValue, string sData)
 	{
 		// Write all the molecule information into Ocean
-		ocean [lLocation,PIXE_OCEAN_MOLECULE_NAME] = sName;
+		ocean [lLocation, PIXE_OCEAN_MOLECULE_NAME] = sName;
 		ocean [lLocation, PIXE_OCEAN_MOLECULE_TYPE] = sType;
 		ocean [lLocation, PIXE_OCEAN_MOLECULE_VALUE] = sValue;
-		ocean [lLocation,PIXE_OCEAN_MOLECULE_DATA] = sData;
+		ocean [lLocation, PIXE_OCEAN_MOLECULE_DATA] = sData;
 
 		// Update the size of the Drop header to reflect new addtion
 		long update = Convert.ToInt64 (ocean [lHeader, PIXE_OCEAN_MOLECULE_VALUE]);
@@ -243,8 +272,8 @@ public class MethodCalls : MonoBehaviour {
 		// Write the Header data
 		createMolecule(
 			lCursor, lCursor, 
-			ocean[lOrigin,PIXE_OCEAN_MOLECULE_NAME], "H", "0", (lParentHeader - lCursor).ToString ()
-			);	
+			ocean[lOrigin,PIXE_OCEAN_MOLECULE_NAME], "H", "0", (lParentHeader - lCursor).ToString ());
+
 		// Update the offset value in the parent element molecule to point to this Header
 		ocean [lOrigin,PIXE_OCEAN_MOLECULE_VALUE] = (lCursor - lOrigin).ToString();
 
@@ -252,10 +281,10 @@ public class MethodCalls : MonoBehaviour {
 		return lCursor;
 	}
 
-	public void Move(long lSession, string sDestination) 
+	public bool Move(long lSession, string sDestination) 
 	{
 		// Retrieve the session pointer from the session array
-		long lCursor = sessions [lSession, PIXE_OCEAN_SESSION_POINTER];
+		long lCursor = sessions [lSession, PIXE_OCEAN_SESSION_CURSOR];
 	
 		// Move the cursor to the current Drop Header location
 		while (ocean[lCursor,PIXE_OCEAN_MOLECULE_TYPE] != "H") {
@@ -284,7 +313,8 @@ public class MethodCalls : MonoBehaviour {
 			// Display error if destination not found in current Drop
 			if (!bFound) {
 				Debug.Log ("ERROR = Unable to move cursor. No matching record found in current location.");
-				return;
+				Debug.Log("Session location: "+lCursor);
+				return false;
 			}
 			// When moving into nested elements:
 			if (ocean [lCursor, PIXE_OCEAN_MOLECULE_TYPE] == "E") {
@@ -299,8 +329,8 @@ public class MethodCalls : MonoBehaviour {
 			}
 		}
 		// Update the postion of the session cursor
-		sessions [lSession, PIXE_OCEAN_SESSION_POINTER] = lCursor;
-		return;
+		sessions [lSession, PIXE_OCEAN_SESSION_CURSOR] = lCursor;
+		return true;
 	}
 
 	// MOVE DROP FUNCTION NEEDED
