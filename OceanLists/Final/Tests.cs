@@ -21,9 +21,23 @@ public class Tests : MonoBehaviour {
 		//test1 ();
 		//test2 ();
 		//test3 ();
-		//test4 ();
-		test5 ();
+		test4 ();
+		//test5 ();
 
+		Debug.Log ("FUNCTION USE COUNT:");
+		Debug.Log ("Initialise() : "+ Jelly.initialise);
+		Debug.Log ("Write() : "+ Jelly.write);
+		Debug.Log ("Read() : "+ Jelly.read);
+		Debug.Log ("Move() : "+ Jelly.move);
+		Debug.Log ("freeSession() : "+ Jelly.freesession);
+		Debug.Log ("createMolecule() : "+ Jelly.createmolecule);
+		Debug.Log ("createNested() : "+ Jelly.createnested);
+		Debug.Log ("findMolecule() : "+ Jelly.findmolecule);
+		Debug.Log ("navigatePath() : "+ Jelly.navigatepath);
+		Debug.Log ("createOcean() : "+ Jelly.createocean);
+		Debug.Log ("preventDropOverlap() : "+ Jelly.preventdropoverlap);
+		Debug.Log ("getDrop() : "+ Jelly.getdrop);
+		Debug.Log ("moveDrop() : "+ Jelly.movedrop);
 	}
 
 	/*
