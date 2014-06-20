@@ -350,9 +350,9 @@ public class Heap : MonoBehaviour {
 	{
 		int iOffset = 0; 
 
-		Molecule mHeader = ocean [iHeader];
-		if (mHeader.Name != null && (string)mHeader.Name != "") {
-			iOffset = (Convert.ToInt32 (mHeader.Value));
+		//Molecule mHeader = ocean [iHeader];
+		if (ocean [iHeader].Name != null && ocean [iHeader].Name != "") {
+			iOffset = (Convert.ToInt32 (ocean[iHeader].Value));
 		}
 
 		// Move the Drop if it has run out of free space or bleeds into another 
@@ -363,18 +363,18 @@ public class Heap : MonoBehaviour {
 			// Amend the write lLocation to match the new Drop
 			iLocation = iHeader;				// NEED TO LOOKUP NEW HEADER
 			iLocation += iOffset;
-			mHeader = ocean[iHeader];
+			//mHeader = ocean[iHeader];
 		}
 		// If the space is free, write to it
-		Molecule mCurrent = ocean [iLocation];
-		mCurrent.Name = sName;
-		mCurrent.Type = sType;
-		mCurrent.Value = sValue;
-		mCurrent.Data = sData;
+		//Molecule mCurrent = ocean [iLocation];
+		ocean [iLocation].Name = sName;
+		ocean [iLocation].Type = sType;
+		ocean [iLocation].Value = sValue;
+		ocean [iLocation].Data = sData;
 
 		// Update the size of the Drop header to reflect new addtion
 		iOffset += 1;
-		mHeader.Value = iOffset.ToString();
+		ocean[iHeader].Value = iOffset.ToString();
 
 		// Move the session cursor to the newly created Molecule
 		session.Cursor = iLocation;
@@ -735,7 +735,7 @@ public class Heap : MonoBehaviour {
 		}
 		// 2) Update all the offset information in the copied Header
 		int iNewHeader = iNewLocation;
-		int iOldHeader = iHeader;
+		//int iOldHeader = iHeader;
 		int iCursorReset = iCursor;
 			
 		// Update the ofset to its parent (NOTE - the root offset always = 0
