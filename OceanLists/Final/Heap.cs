@@ -6,6 +6,7 @@ using System.Collections.Generic;
 public class Heap : MonoBehaviour {
 
 	// iFlag definitions (must be greater than 0)
+	const int PIXE_PSML_UNSET_FLAG = 5;
 	const int PIXE_PSML_READ_ELEMENT = 1;
 	const int PIXE_PSML_WRITE_ELEMENT = 2;
 	const int PIXE_PSML_READ_ATTRIBUTE = 3;
@@ -15,9 +16,13 @@ public class Heap : MonoBehaviour {
 
 	// Operation success/fail codes
 	const int PIXE_OP_SUCCESSFUL = 1;
-	const int PIXE_OP_FAIL_INVALID_PATH = 0;
-	const int PIXE_OP_FAIL_INVALID_CURSOR_POSITION = -1;
-	const int PIXE_OP_FAIL_DUPLICATE_RECORD = -1;
+	const int PIXE_OP_FAIL = 0;
+	const int PIXE_OP_FAIL_INVALID_PATH = -1;
+	const int PIXE_OP_FAIL_INVALID_CURSOR_POSITION = -2;
+	const int PIXE_OP_FAIL_DUPLICATE_RECORD = -3;
+	const int PIXE_OP_FAIL_WRITE_ERROR = -4;
+	const int PIXE_OP_FAIL_NO_FREE_SESSION = -5;
+	const int PIXE_OP_FAIL_MEMORY_ERROR = -6;
 
 	const int PIXE_OCEAN_LIST_DEFAULT_SIZE = 10;
 	const int PIXE_SESSION_LIST_DEFAULT_SIZE = 50;
@@ -49,9 +54,7 @@ public class Heap : MonoBehaviour {
 
 	public List<List<Molecule>> oceanList;
 	public List<Session> sessionList;
-	//public List<int>[] drops;
 
-	//List<List<int>[]> dropLists;
 
 	public int initialise;
 	public int write;
@@ -87,36 +90,17 @@ public class Heap : MonoBehaviour {
 	/*
 	 * INITIALISE: Needs update to handle multiple oceans
 	 * */
-	public void Initialise(ref int iSessionIndex, int iOceanIndex, int iFlags) {
+	public void Initialise(ref int iSessionIndex, int iOceanIndex, ref int iFlags) {
 		initialise++;
 
-		// If the ocean list doesn't already exist create one (with a matching drop list)
+		// If the ocean list doesn't already exist create one
 		int i;
 		if (oceanList == null) {
 			oceanList = new List<List<Molecule>> ();
-			//drops = new List<int>[PIXE_OCEAN_DROP_COULMN_COUNT];
 			
 			for(i=0;i<PIXE_OCEAN_LIST_DEFAULT_SIZE;i++) {
 				oceanList.Add(new List<Molecule>());
 			}
-			// NEEDS FIX - DROP LIST FOR EACH OCEAN
-			// Initialise the drops array by creating a list in each cell
-			/*
-			int x = drops.GetLength (0);
-			for(i=0;i<x;i++) {
-				drops[i] = new List<int>();
-			}
-			// As the ocean is empty, the first availble drop is at the end of the first (resevered for root) header
-			// NOTE: The MANY DropList is one value which is the index of the start of the many block
-			drops [PIXE_OCEAN_DROP_MANY].Add(6);
-			*/
-		}
-		
-		// If no iOceanIndex is provided - assign it to a new (empty) ocean
-		if (iOceanIndex == PIXE_RESET) {
-			createOcean (ref iOceanIndex);
-		} else {
-			// OCEAN = iOceanIndex // INCLUDE
 		}
 		// Likewise if the session list doesn't already exist create it
 		if (sessionList == null) {
@@ -128,16 +112,20 @@ public class Heap : MonoBehaviour {
 				sessionList.Add(newSession);
 			}
 		}
+		// If no iOceanIndex is provided - assign it to a new (empty) ocean
+		if (iOceanIndex == PIXE_RESET) {
+			createOcean (ref iOceanIndex, ref iFlags);
+		} 
 		// Step through session list and look for a free slot
 		for (i=0; i<sessionList.Count; i++) {
 			Session session = sessionList[i];
+			// Attach the found session to the specified ocean (setting the cursor to its Home)
 			if(!session.InUse) {
 				session.InUse = true;
 				session.Ocean = iOceanIndex;
-				// Set cursor to ocean home
 				List<Molecule> ocean = oceanList[iOceanIndex];
 				Molecule home = ocean[PIXE_OCEAN_HOME];
-				session.Cursor = (Convert.ToInt32(home.Value));
+				session.Cursor = (int)home.Value;
 				// Set privleges - according to iFlags - INCOMPLETE
 				iSessionIndex = i;
 				break;
@@ -147,11 +135,12 @@ public class Heap : MonoBehaviour {
 		if (i == sessionList.Count) {
 			iSessionIndex = PIXE_RESET;
 			Debug.Log("ERROR = No free sessions are currently available. Please try again later.");
+			iFlags = PIXE_OP_FAIL_NO_FREE_SESSION;
 		}
 		return;
 	}
 
-	public long Write(int iSessionIndex, string sPath, object oValue, int iFlags)
+	public void Write(int iSessionIndex, string sPath, object oValue, ref int iFlags)
 	{
 		write++;
 
@@ -174,13 +163,14 @@ public class Heap : MonoBehaviour {
 					createMolecule (
 						ref session, ref ocean,
 						iCursor, iCursor,
-						sPath, "H", "1", "0");
+						sPath, "H", 0, 0, ref iFlags);
+					ocean[PIXE_OCEAN_HOME].Type = "LOADED";
 				} else {
-					iFlags = PIXE_OP_FAIL_INVALID_CURSOR_POSITION;
 					Debug.Log("ERROR = Invalid cursor position.");
+					iFlags = PIXE_OP_FAIL_INVALID_CURSOR_POSITION;
 				}
 				// NOTE: Session cursor does not move in this case
-				return iFlags;
+				return;
 			}
 			// Move the cursor to the current Drop header - get Drop size & add the Att/El to the end
 			while(ocean[iCursor].Type != "H") {
@@ -193,15 +183,15 @@ public class Heap : MonoBehaviour {
 				// If Attribute with that name already exists, overwrite the value
 				if(iFlags == PIXE_PSML_WRITE_ATTRIBUTE) {
 					iCursor = session.Cursor;
-					ocean[iCursor].Value = oValue.ToString();
+					ocean[iCursor].Value = oValue;
 					ocean[iCursor].Data = (oValue.GetType ()).ToString ();
-					return iFlags;
+					return;
 				}
 				// Duplicate elements are not allowed
 				else {
 					Debug.Log("ERROR = Cannot write. This element name already exists in this Drop: "+ sPath);
 					iFlags = PIXE_OP_FAIL_DUPLICATE_RECORD;
-					return iFlags;
+					return;
 				}
 			}
 			// If it doesn't alread exist, create a Molecule for it. For elements:
@@ -209,21 +199,21 @@ public class Heap : MonoBehaviour {
 				createMolecule (
 					ref session, ref ocean,
 					(iCursor + iDropSize), iCursor, 
-					sPath, "E", PIXE_OCEAN_UNSET.ToString (), "");
+					sPath, "E", PIXE_OCEAN_UNSET, "", ref iFlags);
 
 			} // For attributes: 
 			else if (iFlags == PIXE_PSML_WRITE_ATTRIBUTE) {
 				createMolecule (
 					ref session, ref ocean,
 					(iCursor + iDropSize), iCursor, 
-					sPath, "A", oValue.ToString (), (oValue.GetType ()).ToString ());
+					sPath, "A", oValue, (oValue.GetType ()).ToString (), ref iFlags);
 			}
 			// NOTE: Cursor is moved to newly written molecule by createMolecule()
 		}
-		return iFlags;
+		return;
 	}
 
-	public object Read(int iSessionIndex, string sPath, int iFlags) 
+	public object Read(int iSessionIndex, string sPath, ref int iFlags) 
 	{
 		read++;
 
@@ -241,9 +231,9 @@ public class Heap : MonoBehaviour {
 
 			// If it's on a FREE them throw an error - Cannot read from an empty molecule
 			if(ocean[session.Cursor].Type == "") {
-			   iFlags = PIXE_OP_FAIL_INVALID_CURSOR_POSITION;
-			   Debug.Log("ERROR = Cannot read. Invalid cursor position");
-			   return null;
+				Debug.Log("ERROR = Cannot read. Invalid cursor position");
+				iFlags = PIXE_OP_FAIL_INVALID_CURSOR_POSITION;
+			   	return null;
 			}
 			else {
 				// Move cursor onto requested attribute/element within the Drop
@@ -274,7 +264,7 @@ public class Heap : MonoBehaviour {
 		return "Requested attribute not found";
 	}
 
-	public bool Move(int iSessionIndex, string sDestination) 
+	public bool Move(int iSessionIndex, string sDestination, ref int iFlags) 
 	{
 		move++;
 
@@ -291,13 +281,14 @@ public class Heap : MonoBehaviour {
 		
 		// Move cursor to parent Header if desitination is ".."
 		if (sDestination == "..") {
-			iCursor = iCursor + (Convert.ToInt32 (ocean[iCursor].Data));
+			iCursor = iCursor + (int)ocean[iCursor].Data;
 			session.Cursor = iCursor;
 		} 
 		// Else, search for the destination attribute/element reference in the current Drop
 		else {
 			if(!findMolecule(ref session, ref ocean, sDestination)){
 				Debug.Log ("ERROR = Unable to move cursor. No matching record found in current location:" + sDestination);
+				iFlags = PIXE_OP_FAIL_INVALID_PATH;
 				return false;
 			}
 			iCursor = session.Cursor;
@@ -305,11 +296,11 @@ public class Heap : MonoBehaviour {
 			// When moving into nested elements - create a Drop Header if one doesn't already exist...
 			if(ocean[iCursor].Type == "E") {
 				if((Convert.ToInt32(ocean[iCursor].Value)) == PIXE_OCEAN_UNSET) {
-					createNested (ref session, ref ocean, iHeader); 
+					createNested (ref session, ref ocean, iHeader, ref iFlags); 
 				}
 				// ...or move the currsor to the correct header if it already exists.
 				else {
-					iCursor = iCursor + (Convert.ToInt32(ocean[iCursor].Value));
+					iCursor = iCursor + (int)ocean[iCursor].Value;
 					session.Cursor = iCursor;
 				}
 			}
@@ -317,7 +308,7 @@ public class Heap : MonoBehaviour {
 		return true;
 	}
 	
-	public void freeSession(ref int iSessionIndex)
+	public void freeSession(ref int iSessionIndex, ref int iFlags)
 	{
 		freesession++;
 
@@ -335,7 +326,7 @@ public class Heap : MonoBehaviour {
 	}
 
 	// BASIC WRITE MOLECULE
-	public void unsafeWrite(ref Session session, ref List<Molecule> ocean, object oName, object oType, object oValue, object oData)
+	public void unsafeWrite(ref Session session, ref List<Molecule> ocean, object oName, object oType, object oValue, object oData, ref int iFlags)
 	{
 		// Retrieve the session cursor
 		int iCursor = session.Cursor; 
@@ -343,13 +334,13 @@ public class Heap : MonoBehaviour {
 		// Write the data to the ocean
 		ocean[iCursor].Name = oName.ToString();
 		ocean[iCursor].Type = oType.ToString();
-		ocean[iCursor].Value = oValue.ToString();
-		ocean[iCursor].Data = oData.ToString();
+		ocean[iCursor].Value = oValue;
+		ocean[iCursor].Data = oData;
 		return;
 	}
 	
 	// BASIC READ MOLECULE
-	public object unsafeRead(int iSession, int iFlags)
+	public object unsafeRead(int iSession, ref int iFlags)
 	{
 		// Retrieve the session cursor
 		int iReadIndex = sessionList [iSession].Cursor; 
@@ -375,18 +366,20 @@ public class Heap : MonoBehaviour {
 				break;
 			default:
 				Debug.Log ("ERROR = Unable to read. Invalid data request.");
+				iFlags = PIXE_OP_FAIL;
 				break;
 			}
 		} 
 		else {
 			Debug.Log("ERROR = Unable to read. Invalid cursor position. " + iReadIndex);
+			iFlags = PIXE_OP_FAIL_INVALID_PATH;
 		}
 		return null;
 	}
 
 	private void createMolecule(ref Session session, ref List<Molecule> ocean, 
 	                            int iLocation, int iHeader, string sName, 
-	                            string sType, string sValue, string sData)
+	                            string sType, object oValue, object oData, ref int iFlags)
 	{
 		createmolecule++;
 
@@ -394,33 +387,43 @@ public class Heap : MonoBehaviour {
 
 		// When writing the root node:
 		if (ocean [iHeader].Name != null && ocean [iHeader].Name != "") {
-			iOffset = (Convert.ToInt32 (ocean[iHeader].Value));
+			iOffset = (int)ocean[iHeader].Value;
 		}
 		// Move the Drop if it has run out of free space or bleeds into another drop's space
-		preventDropOverlap (ref session, ref ocean, iLocation, iHeader);
-		if (ocean [iLocation].Name != "" && ocean [iLocation].Name != null) {
-			moveDrop(ref session, ref ocean, ref iHeader);
+		if (ocean [PIXE_OCEAN_HOME].Type != "EMPTY") {
+			preventDropOverlap (ref session, ref ocean, iLocation, iHeader);
+		}
+		if (iLocation >= (ocean.Count-1) ||
+		    (ocean [iLocation].Name != "" && ocean [iLocation].Name != null)) {
+			moveDrop(ref session, ref ocean, ref iHeader/*, ref iFlags*/);
 			
 			// Amend the write lLocation to match the new Drop
 			iLocation = iHeader;					// Needed to lookup new header
 			iLocation += iOffset;
 		}
+
+		if (ocean [iLocation].Name != "" && ocean [iLocation].Name != null) {
+			Debug.Log("ERROR = Molecule OVERLAP !!!!!!!!!! "+iLocation);
+			Debug.Log(ocean [iLocation].Name);
+			iFlags = PIXE_OP_FAIL_WRITE_ERROR;
+			return;
+		}
 		// If the space is free, write to it
 		ocean [iLocation].Name = sName;
 		ocean [iLocation].Type = sType;
-		ocean [iLocation].Value = sValue;
-		ocean [iLocation].Data = sData;
+		ocean [iLocation].Value = oValue;
+		ocean [iLocation].Data = oData;
 
 		// Update the size of the Drop header to reflect new addtion
 		iOffset += 1;
-		ocean[iHeader].Value = iOffset.ToString();
+		ocean[iHeader].Value = iOffset;
 
 		// Move the session cursor to the newly created Molecule
 		session.Cursor = iLocation;
 		return;
 	}
 	
-	private void createNested(ref Session session, ref List<Molecule> ocean, int iParentHeader)
+	private void createNested(ref Session session, ref List<Molecule> ocean, int iParentHeader, ref int iFlags)
 	{
 		createnested++;
 
@@ -433,10 +436,10 @@ public class Heap : MonoBehaviour {
 		createMolecule(
 			ref session, ref ocean,
 			iCursor, iCursor, 
-			mHeader.Name, "H", "1", (iParentHeader - iCursor).ToString ());   /// CHANGE 1 to 0 if wrong
+			mHeader.Name, "H", 0, (iParentHeader - iCursor), ref iFlags);   /// CHANGE 1 to 0 if wrong
 
 		// Update the offset value in the parent element molecule to point to this Header
-		mHeader.Value = (iCursor - iOrigin).ToString();
+		mHeader.Value = (iCursor - iOrigin);
 		return;
 	}
 
@@ -453,7 +456,7 @@ public class Heap : MonoBehaviour {
 			iCursor--;
 		}
 		// ... and get the size of the Drop (to use for search area limit)
-		int iLimit = (Convert.ToInt32 (ocean[iCursor].Value));
+		int iLimit = (int)ocean[iCursor].Value;
 		iLimit += iCursor;
 		bool bFound = false;
 
@@ -500,13 +503,13 @@ public class Heap : MonoBehaviour {
 			}
 			// Save current cursor location then set the cursor to the root node of the ocean
 			int iCursorReset = session.Cursor;
-			session.Cursor = (Convert.ToInt32(ocean[PIXE_OCEAN_HOME].Value));
+			session.Cursor = (int)ocean[PIXE_OCEAN_HOME].Value;
 
 			// Attempt to move cursor to provided path
 			int i=0, iDepth = sPathArray.GetLength(0);
 			bool bFound = true;
 			while(i<iDepth && bFound == true) {
-				bFound = Move (session.ID, sPathArray[i]);
+				bFound = Move (session.ID, sPathArray[i], ref iFlags);
 				i++;
 			}
 			if(i != iDepth || !bFound) {
@@ -518,8 +521,8 @@ public class Heap : MonoBehaviour {
 				}
 				// If path is invalid - Reset cursor to original location
 				session.Cursor = iCursorReset;
-				iFlags = PIXE_OP_FAIL_INVALID_PATH;
 				Debug.Log("ERROR = Invalid path provided.");
+				iFlags = PIXE_OP_FAIL_INVALID_PATH;
 			}
 		}
 		return;
@@ -528,7 +531,7 @@ public class Heap : MonoBehaviour {
 	/*
 	 * Creates an empty ocean.
 	 * */
-	private void createOcean(ref int iOceanIndex)
+	private void createOcean(ref int iOceanIndex, ref int iFlags)
 	{
 		createocean++;
 
@@ -549,12 +552,17 @@ public class Heap : MonoBehaviour {
 
 			// Fill the Ocean with default min number of Molecules
 			for (i=0; i<PIXE_OCEAN_DEFAULT_MOLECULE_COUNT; i++) {
-				// NOTE: All Molecule variables are automatically initialised as null
+				// Add and intialise all molecules 
 				newOcean.Add (new Molecule ());
+				newOcean[i].Name = "";
+				newOcean[i].Type = "";
+				newOcean[i].Value = "";
+				newOcean[i].Data = "";
 			}
 			// Initialise the ocean home in the first free molecule (1)
 			newOcean[PIXE_OCEAN_HOME].Name = "HOME";
-			newOcean[PIXE_OCEAN_HOME].Value = PIXE_OCEAN_DEFAULT_HOME.ToString();
+			newOcean[PIXE_OCEAN_HOME].Type = "Empty";
+			newOcean[PIXE_OCEAN_HOME].Value = PIXE_OCEAN_DEFAULT_HOME;
 			newOcean[PIXE_OCEAN_HOME].Data = new List<int>[PIXE_OCEAN_DROP_COULMN_COUNT];
 
 			// Initialise the drops array by creating a list in each cell
@@ -568,6 +576,7 @@ public class Heap : MonoBehaviour {
 			lDrops [PIXE_OCEAN_DROP_MANY].Add(6);
 		} 
 		else {
+			iFlags = PIXE_OP_FAIL_MEMORY_ERROR;
 			Debug.Log("ERROR = Unable to create ocean. Ocean list has not been intialised.");
 			iOceanIndex = PIXE_RESET;
 		}
@@ -577,12 +586,12 @@ public class Heap : MonoBehaviour {
 	/*
 	 * Clears the entire contents of a specified Ocean in the Ocean List
 	 * */
-	public void drainOcean(int iOceanIndex)
+	public void drainOcean(int iOceanIndex, ref int iFlags)
 	{
 		List<Molecule> toDrain = oceanList [iOceanIndex];
 		toDrain.Clear ();
 	}
-	
+	// THERE IS AN ISSUE HERE WITH TEST 
 	private void preventDropOverlap(ref Session session, ref List<Molecule> ocean, int iIndex, int iHeader) 
 	{
 		preventdropoverlap++;
@@ -591,10 +600,8 @@ public class Heap : MonoBehaviour {
 		List<int>[] dropArray = (List<int>[])ocean[PIXE_OCEAN_HOME].Data;
 		List<int> dropLookup = dropArray[PIXE_OCEAN_DROP_MANY];
 
-		// Check the many list
+		// Check the many list - amend start point of the many block if overlap has occurred there
 		int iLast = dropLookup.Count - 1;
-		
-		// Amend the start point of the many block if overlap has occurred
 		if (iLast >= 0) {
 			int iCurrentStart = dropLookup[iLast];
 			if(iCurrentStart == iIndex) {
@@ -603,78 +610,59 @@ public class Heap : MonoBehaviour {
 				return;
 			}
 		}
-		// Get the the Drop size & appropriate list
-		if (ocean [iHeader].Value == "" || ocean [iHeader].Value == null) {
-			return;
-		}
-		int iDropSize = Convert.ToInt32 (ocean [iHeader].Value);
+		// Otherwise, check each drop list to ensure new write does not encroach into another drop
 		int iDropList = PIXE_OCEAN_DROP_5;
-		if (iDropSize >= 0 && iDropSize <= 5) {
-			iDropList = PIXE_OCEAN_DROP_5;
-		} else if (iDropSize > 5 && iDropSize <= 10) {
-			iDropList = PIXE_OCEAN_DROP_10;
-		} else if (iDropSize > 10 && iDropSize <= 15) {
-			iDropList = PIXE_OCEAN_DROP_15;
-		} else if (iDropSize > 15 && iDropSize <= 20) {
-			iDropList = PIXE_OCEAN_DROP_20;
-		} else if (iDropSize > 20 && iDropSize <= 25) {
-			iDropList = PIXE_OCEAN_DROP_25;
-		} else if (iDropSize > 25 && iDropSize <= 30) {
-			iDropList = PIXE_OCEAN_DROP_30;
-		} else if (iDropSize > 30) {
-			iDropList = PIXE_OCEAN_DROP_MANY;
-		} 
 		dropLookup = dropArray [iDropList];
-
-
-		if (iDropList != PIXE_OCEAN_DROP_MANY) {
+		bool bFound = false;
+		while (iDropList < PIXE_OCEAN_DROP_30) {
 			foreach (int drop in dropLookup) {
 				// If a clash occurs
 				if (drop == iIndex) {
+					bFound = true;
 					int iClash = iIndex;
 					// Remove the free drop from the list
 					dropLookup.Remove(iClash);
-					// Resize the free drop and put in correct list
+					// Modify the original free drop start point
 					iClash += 5;
+					bool bAddToList = true;
+					// Update the lists to reflect this new change
 					switch(iDropList) {
+					case PIXE_OCEAN_DROP_5:
+						bAddToList = false;
+						break;
 					case PIXE_OCEAN_DROP_10:
 						iDropList = PIXE_OCEAN_DROP_5;
-						dropLookup = dropArray [iDropList];
-						dropLookup.Add(iClash);
-						Debug.Log("Drop found in "+iDropList);
 						break;
 					case PIXE_OCEAN_DROP_15:
 						iDropList = PIXE_OCEAN_DROP_10;
-						dropLookup = dropArray [iDropList];
-						dropLookup.Add(iClash);
-						Debug.Log("Drop found in "+iDropList);
 						break;
 					case PIXE_OCEAN_DROP_20:
 						iDropList = PIXE_OCEAN_DROP_15;
-						dropLookup = dropArray [iDropList];
-						dropLookup.Add(iClash);
-						Debug.Log("Drop found in "+iDropList);
 						break;
 					case PIXE_OCEAN_DROP_25:
 						iDropList = PIXE_OCEAN_DROP_20;
-						dropLookup = dropArray [iDropList];
-						dropLookup.Add(iClash);
-						Debug.Log("Drop found in "+iDropList);
 						break;
 					case PIXE_OCEAN_DROP_30:
 						iDropList = PIXE_OCEAN_DROP_25;
-						dropLookup = dropArray [iDropList];
-						dropLookup.Add(iClash);
-						Debug.Log("Drop found in "+iDropList);
 						break;
 					default:
-						Debug.Log("No drop found in "+iDropList);
+						bAddToList = false;
 						break;
 					}
-					return;
+					if(bAddToList) {
+						dropLookup = dropArray [iDropList];
+						dropLookup.Add(iClash);
+					}
+					// Return if the drop is found & dealt with
+					if(bFound) {
+						//Debug.Log("Overlap prevented. Problem cell = "+iClash);
+						return;
+					}
 				}
 			}
-			return;
+			// Else, check the next drop list
+			iDropList++;
+			dropLookup = dropArray[iDropList];
 		}
 		return;
 	}
@@ -718,8 +706,8 @@ public class Heap : MonoBehaviour {
 		}
 		if (iSize > 30) {
 			iDropList = PIXE_OCEAN_DROP_MANY;
-			iSize = (iSize + iSize % 5);
-			Debug.Log("Rounded up: "+iSize);
+			iSize = (iSize + (5-iSize % 5));
+			//Debug.Log("Rounded up: "+iSize);
 		}
 		// Retreive the List holding the appropriately sized Drops & get the index of the last item
 		List<int> dropLookup;
@@ -727,11 +715,8 @@ public class Heap : MonoBehaviour {
 		bool bDone = false;
 		
 		while (!bDone) {
-			//dropLookup = drops [iDropList];
 			List<int>[] dropArray = (List<int>[])ocean[PIXE_OCEAN_HOME].Data;
 			dropLookup = dropArray[iDropList];
-
-			//dropLookup = drops [iDropList];
 			iLast = dropLookup.Count - 1;
 			
 			// If the list is not empty, allocate the last Drop then remove it from the list
@@ -739,37 +724,32 @@ public class Heap : MonoBehaviour {
 				iFoundDrop = dropLookup[iLast];
 				dropLookup.RemoveAt(iLast);
 
-				// If in the many: 
-				if(iDropList == PIXE_OCEAN_DROP_MANY) {
-					// Expand ocean if needed
-					int iMoleculeCount = ocean.Count;
-					iMoleculeCount = iMoleculeCount - iFoundDrop;
-					if((iMoleculeCount - iSize) < 5) {
-						int i;
-						for(i=0;i<(iSize+5);i++) {
-							ocean.Add (new Molecule ());
-						}
-					} // Then amend the start point of the many block
-					//drops [PIXE_OCEAN_DROP_MANY].Add(iFoundDrop + iSize);
+				// Expand ocean if needed
+				int iLastMolecule = ocean.Count -1;
+				int iNewDropEnd = iFoundDrop + iSize;
+				if(iNewDropEnd >= iLastMolecule) {
+					int i;
+					for(i=iLastMolecule;i<iNewDropEnd;i++) {
+						ocean.Add (new Molecule ());
+						ocean[i].Name = "";
+						ocean[i].Type = "";
+						ocean[i].Value = "";
+						ocean[i].Data = "";
+					}
+				}
+				// If in the many: amend the start point of the many block
+				if(iDropList == PIXE_OCEAN_DROP_MANY) { 
 					dropArray [PIXE_OCEAN_DROP_MANY].Add(iFoundDrop + iSize);
 				}
 				bDone = true;
 			}
-			/* 
-			 * If nothing is found, repeat the search in the Many list.
-			 * If the Many list has already been search - make the ocean bigger then try again.
-			 */
-			if(iDropList == PIXE_OCEAN_DROP_MANY) {
-				// TO DO:
-				// INCREASE THE SIZE OF THE OCEAN
-				// THIS FUNCTION CALL SHOULD ADD FREE TO MANY
-			}
+			//If nothing is found, repeat the search in the Many list.
 			iDropList = PIXE_OCEAN_DROP_MANY;
 		}
 		return iFoundDrop;
 	}
 
-	private void moveDrop(ref Session session, ref List<Molecule> ocean, /*ref long iCursor,*/ ref int iHeader) 
+	private void moveDrop(ref Session session, ref List<Molecule> ocean, ref int iHeader) 
 	{
 		movedrop++;
 
@@ -782,9 +762,16 @@ public class Heap : MonoBehaviour {
 
 		// The required Drop size needs to be larger than the current Drop size:
 		Molecule mHeader = ocean [iHeader];
-		int iDropSize = (Convert.ToInt32 (mHeader.Value));
+		int iDropSize = (int)mHeader.Value;
 		int iNewLocation = getDrop (ref session, ref ocean, (iDropSize+1), iHeader, true);
 
+		if (ocean [iNewLocation].Name != "" && ocean [iNewLocation].Name != null) {
+			Debug.Log("WARNING = moveDrop OVERLAP detected!!!!!!!!!! "+iNewLocation);
+			Debug.Log("** " +ocean [iNewLocation].Name+" **");
+			while (ocean [iNewLocation].Name != "" && ocean [iNewLocation].Name != null) {
+				iNewLocation = getDrop (ref session, ref ocean, (iDropSize+1), iHeader, true);
+			}
+		}
 		// 1) Copy the drop to the new location
 		int i;
 		for(i=0; i<iDropSize; i++) {
@@ -792,10 +779,21 @@ public class Heap : MonoBehaviour {
 			Molecule mCopyFrom = ocean [iCursor+i];
 			mCopyTo.Name = String.Copy (mCopyFrom.Name);
 			mCopyTo.Type = String.Copy (mCopyFrom.Type);
-			mCopyTo.Value = String.Copy (mCopyFrom.Value);
-
-			//Debug.Log("TYPE!!!!!!!!! = "+mCopyFrom.Data.GetType());
-			string sDataType = (mCopyFrom.Data.GetType()).ToString();
+			// Values
+			string sDataType = (mCopyFrom.Value.GetType()).ToString();
+			switch(sDataType) {
+			case "System.String":
+				mCopyTo.Value = String.Copy ((string)mCopyFrom.Value);
+				break;
+			case "System.Int32":
+				mCopyTo.Value = mCopyFrom.Value;
+				break;
+			default:
+				Debug.Log("ERROR = Invalid data type found in Molecule (Data).");
+				break;
+			}
+			// Data
+			sDataType = (mCopyFrom.Data.GetType()).ToString();
 			switch(sDataType) {
 			case "System.String":
 				mCopyTo.Data = String.Copy ((string)mCopyFrom.Data);
@@ -807,34 +805,30 @@ public class Heap : MonoBehaviour {
 				Debug.Log("ERROR = Invalid data type found in Molecule (Data).");
 				break;
 			}
-
-
-			//mCopyTo.Data = String.Copy (mCopyFrom.Data);
 		}
 		// If the root node has been moved - update the root positon
-		if(iHeader == (Convert.ToInt32(ocean[PIXE_OCEAN_HOME].Value))) {
-			ocean[PIXE_OCEAN_HOME].Value = iNewLocation.ToString();
+		if(iHeader == (int)ocean[PIXE_OCEAN_HOME].Value) {
+			ocean[PIXE_OCEAN_HOME].Value = iNewLocation;
 		}
 		// 2) Update all the offset information in the copied Header
 		int iNewHeader = iNewLocation;
-		//int iOldHeader = iHeader;
 		int iCursorReset = iCursor;
 			
 		// Update the ofset to its parent (NOTE - the root offset always = 0
-		if (iNewHeader != (Convert.ToInt32 (ocean [PIXE_OCEAN_HOME].Value))) {	
-			iCursor = iCursor + (Convert.ToInt32 (ocean [iCursor].Data));
-			ocean [iNewHeader].Data = (iCursor - iNewHeader).ToString ();
+		if (iNewHeader != (int)ocean [PIXE_OCEAN_HOME].Value) {	
+			iCursor = iCursor + (int)ocean [iCursor].Data;
+			ocean [iNewHeader].Data = (iCursor - iNewHeader);
 		}
-		iCursor = iNewHeader + (Convert.ToInt32(ocean[iNewHeader].Data));
+		iCursor = iNewHeader + (int)ocean[iNewHeader].Data;
 		session.Cursor = iCursor;
 
 		// Update the offset in the Parent
 		if (findMolecule (ref session, ref ocean, ocean [iNewHeader].Name)) {
-			iCursor = session.Cursor; // THIS MAY FUCK THINGS UP
-			ocean [iCursor].Value = (iNewHeader - iCursor).ToString();
+			iCursor = session.Cursor; 
+			ocean [iCursor].Value = (iNewHeader - iCursor);
 		}
 		else {
-			Debug.Log("NOT FOUND!!!!!!!!!!!!!!!!!!!");
+			Debug.Log("MOLECULE NOT FOUND!!!!!!!!!!!!!!!!!!!");
 		}
 		iCursor = iCursorReset;
 
@@ -845,25 +839,36 @@ public class Heap : MonoBehaviour {
 				int iOldElement = iHeader + i;
 
 				// Only update offsets to elements with existing Headers
-				if (ocean [iOldElement].Value != PIXE_OCEAN_UNSET.ToString ()) {
-
+				if ((int)ocean [iOldElement].Value != PIXE_OCEAN_UNSET) {
 					// Update the offsets in the Elements Header
-					iCursor = iOldElement + (Convert.ToInt32(ocean[iOldElement].Value));
-					ocean[iNewElement].Value = (iCursor - iNewElement).ToString();
-					ocean[iCursor].Data = (iNewLocation -iCursor).ToString();
-				}	
+					iCursor = iOldElement + (int)ocean[iOldElement].Value;
+					ocean[iNewElement].Value = (iCursor - iNewElement);
+					ocean[iCursor].Data = (iNewLocation -iCursor);
+				}
 			}
 		}
 		// 4) Delete the orginal Drop
 		for (i=0; i<iDropSize; i++) {
 			ocean [(iHeader + i)].Name = "";
 			ocean [(iHeader + i)].Type = "";
-			ocean [(iHeader + i)].Value = "";
-			ocean [(iHeader + i)].Data = "";
+			ocean [(iHeader + i)].Value = null;
+			ocean [(iHeader + i)].Data = null;
 		}
 		// 5) Put the newly freed space into the drops array
+		addToDrops (ref ocean, iDropSize, iHeader);
+
+		// 6) Move the cursor and header references to the new Drop location
+		session.Cursor = iNewLocation + iDropSize;
+		iCursor = iNewLocation + iDropSize;
+		iHeader = iNewLocation;
+		return;
+	}
+	private void addToDrops(ref List<Molecule> ocean, int iDropSize, int iLocation)
+	{
+		List<int>[] dropArray;
+
+		// Allocate to the correctly sized drop list
 		int iDropList = PIXE_OCEAN_DROP_5;
-		int iNewFree = iHeader;
 		if (iDropSize >= 0 && iDropSize <= 5) {
 			iDropList = PIXE_OCEAN_DROP_5;
 		}
@@ -882,18 +887,20 @@ public class Heap : MonoBehaviour {
 		if (iDropSize > 25 && iDropSize <= 30) {
 			iDropList = PIXE_OCEAN_DROP_30;
 		}
+		// If it's bigger than 30, break it up into chunks of 5
 		if (iDropSize > 30) {
-			iDropList = PIXE_OCEAN_DROP_MANY;
-		}
-		//drops [iDropList].Add (iNewFree);
-		List<int>[] dropArray = (List<int>[])ocean[PIXE_OCEAN_HOME].Data;
-		dropArray [iDropList].Add (iNewFree);
-
-
-		// 6) Move the cursor and header references to the new Drop location
-		session.Cursor = iNewLocation + iDropSize;
-		iCursor = iNewLocation + iDropSize;
-		iHeader = iNewLocation;
+			int iNumberOfBlocks = iDropSize / 5;
+			int i;
+			for(i=0;i<iNumberOfBlocks;i++) {
+				dropArray = (List<int>[])ocean [PIXE_OCEAN_HOME].Data;
+				dropArray [PIXE_OCEAN_DROP_5].Add (iLocation);
+				iLocation+=5;
+			}
+			return;
+		}	
+		// Add the Drop to the selected list
+		dropArray = (List<int>[])ocean [PIXE_OCEAN_HOME].Data;
+		dropArray [iDropList].Add (iLocation);
 		return;
 	}
 }
