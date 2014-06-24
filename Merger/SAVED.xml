@@ -11,7 +11,12 @@
 			Mask="Rectangle.svg">
 			<Style
 				Border="Solid"
-				FillColour="#660000" />
+				FillColour="#660000">
+				<Graphic
+					Default="BorderSolid100.svg"
+					Ratio_50="BorderSolid50.svg"
+					Ratio_150="BorderSolid150.svg" />
+			</Style>
 			<BlackHole
 				X="88.15"
 				Y="2.75"
@@ -22,21 +27,50 @@
 					Hover="BlackHoleHover.svg"
 					Selected="BlackHoleSelected.svg"
 					Disabled="BlackHoleDisabled.svg" />
-				<Resize
-					MaxX="-9.1"
-					MaxY="-9.1"
-					Width="9.1"
-					Height="9.1" />
-				<Title
-					X="10"
+				<HotArea
+					X="85.4"
 					Y="0"
-					Width="80"
-					Height="15.6"
-					Style="Text"
-					HorizontalAlignment="Centre"
-					VerticalAlignment="Centre" />
-				<Bungee />
+					Width="14.6"
+					Height="14.6" />
 			</BlackHole>
+			<Resize
+				MaxX="-9.1"
+				MaxY="-9.1"
+				Width="9.1"
+				Height="9.1">
+				<Graphic
+					Default="Resize.svg"
+					Hover="ResizeHover.svg"
+					Selected="ResizeSelected.svg"
+					Disabled="ResizeDisabled.svg" />
+				<HotArea
+					X="-14.6"
+					Y="0"
+					Width="14.6"
+					Height="14.6" />
+			</Resize>
+			<Title
+				X="10"
+				Y="0"
+				Width="80"
+				Height="15.6"
+				Style="Text"
+				HorizontalAlignment="Centre"
+				VerticalAlignment="Centre">
+				<Font
+					Face="Times"
+					Weight="Normal"
+					Size="10"
+					Colour="#BBE9FF" />
+				<Bungee>
+					<Line
+						Colour="#BBE9FF"
+						MaxWidth="1.5"
+						WidthPerLayer="0.5"
+						AvoidJellyfish="false"
+						MergeLinesAtSameLevel="true" />
+				</Bungee>
+			</Title>
 		</Appearance>
 	</Jellyfish>
 </psml>

@@ -353,6 +353,16 @@ public class Heap : MonoBehaviour {
 		return "Requested attribute not found";
 	}
 
+	public string WhereAmI(int iSessionIndex) {
+
+		// Retrieve the session cursor and correct ocean
+		Session session = sessionList[iSessionIndex];
+		List<Molecule> ocean = oceanList[session.Ocean];
+
+		return ocean [session.Cursor].Name;
+
+	}
+
 	public bool Move(int iSessionIndex, string sDestination, ref int iFlags) 
 	{
 		move++;
@@ -377,6 +387,7 @@ public class Heap : MonoBehaviour {
 		else {
 			if(!findMolecule(ref session, ref ocean, sDestination)){
 				Debug.Log ("ERROR = Unable to move cursor. No matching record found in current location:" + sDestination);
+				Debug.Log(ocean[session.Cursor].Name);
 				iFlags = PIXE_OP_FAIL_INVALID_PATH;
 				return false;
 			}
@@ -394,6 +405,7 @@ public class Heap : MonoBehaviour {
 				}
 			}
 		}
+		//Debug.Log ("Cursor moved to: " + ocean [session.Cursor].Name);
 		return true;
 	}
 	

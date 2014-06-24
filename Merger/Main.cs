@@ -24,7 +24,7 @@ public class Main : MonoBehaviour {
 		// NOTE: If iOceanIndex = PIXE_RESET, a new empty ocean is created
 		int iOceanIndex = PIXE_RESET;			
 		int thisSession = PIXE_RESET;
-		int iFlags = PIXE_PSML_UNSET_FLAG;;
+		int iFlags = PIXE_PSML_UNSET_FLAG;
 		
 		// Initialise the session and declare the ocean
 		API.Initialise (ref thisSession, iOceanIndex, ref iFlags);	
@@ -38,5 +38,19 @@ public class Main : MonoBehaviour {
 	// Update is called once per frame
 	void Update () {
 	
+	}
+
+	void OnGui()
+	{
+		GUI.Box(new Rect(10,10,100,90), "Hello?");
+		
+		if (PSML.success) {
+			GUI.Label (new Rect (10, 10, Screen.width, Screen.height),
+			           "SUCCESS :)");
+		} 
+		else {
+			GUI.Label (new Rect (10, 10, Screen.width, Screen.height),
+			           "FAIL :(");
+		}
 	}
 }

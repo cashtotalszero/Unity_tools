@@ -82,18 +82,43 @@ public class JellyfishXMLgui : MonoBehaviour {
 	int thisSession = PIXE_RESET;
 	int iFlags = PIXE_PSML_UNSET_FLAG;
 	bool secondPass = false;
-	
+
+	private int graphicCount;
+
+	public bool success = false;
+	public bool load = false;
+
+	void Start()
+	{
+		graphicCount = 0;
+
+	}
+
+	void Update() {
+		if (load) {
+			guiText.text = "SUCESS :)";
+		} else {
+			guiText.text = "FAIL : (";
+		}
+	}
+
 	public void Load () {
 
 		string elementName;
 		myLog = "------------------------------------------------------------\nWARNINGS:";
 		int i;
 
-		if (XmlValidator.validateXML ("Assets/psml.xml")) {
+		TextAsset psml = Resources.Load("Assets/psml.xml") as TextAsset;
 
+		if (XmlValidator.validateXML ("Assets/psml.xml")) {
+	
+
+
+			load = true;
 			// Makes 2 passes
 			for (i=0;i<2;i++) {
 				myReader = XmlReader.Create ("Assets/psml.xml");
+			
 				while (myReader.Read()) {
 
 					// Skip the Xml header
@@ -124,6 +149,11 @@ public class JellyfishXMLgui : MonoBehaviour {
 								resetTags ();
 							    // Process the jellyfish and output tags statuses to log
 								getJellyfish (myReader, elementName);
+							
+								if(secondPass) {
+									API.Move(thisSession,"..", ref iFlags);
+								}
+
 								tagsToLog (jellyfishName);
 							    // Move to the next jellyfish (if any)
 								myReader.Read ();
@@ -165,8 +195,19 @@ public class JellyfishXMLgui : MonoBehaviour {
 			          " VALUE: " + current.Value + " DATA: " + current.Data);
 		}
 
+
+
 		Save (thisSession, ref ocean); 
+		iFlags = PIXE_PSML_READ_ATTRIBUTE;
+		object toRead = API.Read (thisSession, "psml://psml/Jellyfish/Appearance/BlackHole/HotArea/X", ref iFlags);
+		Debug.Log ("EXPECTING 85.4: " + toRead);
+		if (toRead.ToString() == "85.4") {
+			Debug.Log("SUCESS!");
+			success = true;
+		}
 	}
+
+
 
 	public void Save(int iSessionIndex, ref List<Molecule> ocean) {
 
@@ -188,20 +229,10 @@ public class JellyfishXMLgui : MonoBehaviour {
 		xmlWriter.WriteStartDocument();
 		xmlWriter.WriteStartElement(ocean[session.Cursor].Name);
 
-		//xmlWriter.WriteStartElement(ocean[session.Cursor].Name);
-		saveNestedElements (xmlWriter, ref session, ref ocean);
-		/*
+	
 
-		if(API.hasElements(ref session, ref ocean)) {
-			nestedElements = API.getElements (ref session, ref ocean);
-			foreach (string sElement in nestedElements) {
-				API.Move (iSessionIndex, sElement, ref iFlags);
-				// Make recursive call here(?)
-				saveNested(xmlWriter, ref session, ref ocean);
-				API.Move(iSessionIndex,"..", ref iFlags);
-			}
-		}
-*/
+		saveNestedElements (xmlWriter, ref session, ref ocean,"Jellyfish");
+
 	
 		xmlWriter.WriteEndElement();
 
@@ -210,103 +241,63 @@ public class JellyfishXMLgui : MonoBehaviour {
 
 	}
 
-	private void saveNestedElements(XmlWriter xmlWriter, ref Session session, ref List<Molecule> ocean)
+	private void saveNestedElements(XmlWriter xmlWriter, ref Session session, ref List<Molecule> ocean, string sParent)
 	{
-		//xmlWriter.WriteStartElement(ocean[session.Cursor].Name);
-
-		if (API.hasElements (ref session, ref ocean, PIXE_PSML_ELEMENT)) {
+		// Look for any elements in the current Drop
+		if(API.hasElements (ref session, ref ocean, PIXE_PSML_ELEMENT)) {
 			List<string> nestedElements = API.getElements (ref session, ref ocean, PIXE_PSML_ELEMENT);
-			List<string> attributes;
 
-			//API.Move (session.ID, ocean[session.Cursor].Name, ref iFlags);
+			/*
+			Debug.Log("Parent elements: ");
+			foreach(string ssElement in nestedElements) {
+				Debug.Log(ssElement);
+			}
+			Debug.Log("****************");
+*/
 
-		
-			foreach (string sElement in nestedElements) {
-				iFlags = PIXE_PSML_UNSET_FLAG;
-				API.Move (session.ID, sElement, ref iFlags);
-				xmlWriter.WriteStartElement (ocean [session.Cursor].Name);
-				// Get all the attributes
-				if(API.hasElements(ref session, ref ocean, PIXE_PSML_ATTRIBUTE)) {	
-					attributes = API.getElements (ref session, ref ocean, PIXE_PSML_ATTRIBUTE);
-					foreach(string sAttribute in attributes) {
-						API.Move (session.ID, sAttribute, ref iFlags);
-						xmlWriter.WriteAttributeString(ocean[session.Cursor].Name,ocean[session.Cursor].Value.ToString());
+	
+
+
+			// Move into each in turn
+			foreach(string sElement in nestedElements) {
+				if(sElement == sParent) {
+					iFlags = PIXE_PSML_UNSET_FLAG;
+	
+					// Move the cursor into the element & write the xml start tag to file
+					API.Move(session.ID, sElement, ref iFlags);
+					xmlWriter.WriteStartElement (ocean [session.Cursor].Name);
+	
+					// Check for attributes
+					if(API.hasElements(ref session, ref ocean, PIXE_PSML_ATTRIBUTE)) {	
+						List<string>  attributes = API.getElements (ref session, ref ocean, PIXE_PSML_ATTRIBUTE);
+						// Write each one
+						foreach(string sAttribute in attributes) {
+							API.Move (session.ID, sAttribute, ref iFlags);
+							xmlWriter.WriteAttributeString(ocean[session.Cursor].Name,ocean[session.Cursor].Value.ToString());
+						}
 					}
+					// Check for any nested elements
+					if(API.hasElements (ref session, ref ocean, PIXE_PSML_ELEMENT)) {
+						List<string> nestedElements2 = API.getElements (ref session, ref ocean, PIXE_PSML_ELEMENT);
+						/*
+						Debug.Log("Nested elements: ");
+						foreach(string sssElement in nestedElements2) {
+							Debug.Log(sssElement);
+						}
+						Debug.Log("****************");
+*/
+						foreach(string sNestedElement in nestedElements2) {
+							saveNestedElements (xmlWriter, ref session, ref ocean, sNestedElement);
+						}
+					}
+					// Write the xml end tag to file & move cursor back up to the parent
+					xmlWriter.WriteEndElement ();
+					API.Move(session.ID,"..", ref iFlags);
 				}
-
-				// Recursively call function for all nested elements
-				if (API.hasElements (ref session, ref ocean, PIXE_PSML_ELEMENT)) {				
-					saveNestedElements (xmlWriter, ref session, ref ocean);
-				}
-				xmlWriter.WriteEndElement ();
-				API.Move (session.ID, "..", ref iFlags);
-			}	
+			}
 		}
-
-		//xmlWriter.WriteEndElement();
-		API.Move (session.ID, "..", ref iFlags);
-
 	}
 
-
-	private void resetTags()
-	{
-		jellyfishWritten = false;
-		appearance = false;
-		appearanceWritten = false;
-		style = false;
-		styleWritten = false;
-		blackhole = false;
-		blackholeWritten = false;
-		resize = false;
-		resizeWritten = false;
-		title = false;
-		titleWritten = false;
-		titleFont = false;
-		titleFontWritten = false;
-		bungee = false;
-		bungeeWritten = false;
-		bungeeConnector = false;
-		bungeeConnectorWritten = false;
-		bungeeConnectorMarker = false;
-		bungeeConnectorMarkerWritten = false;
-		bungeeLine = false;
-		bungeeLineWritten = false;
-		blackholeGraphic = false;
-		blackholeGraphicWritten = false;
-		blackholeHotArea = false;
-		blackholeHotAreaWritten = false;
-		styleGraphic = false;
-		styleGraphicWritten = false;
-		resizeGraphic = false;
-		resizeGraphicWritten = false;
-		resizeHotArea = false;
-		resizeHotAreaWritten = false;
-	}
-
-	private void tagsToLog(string name)
-	{
-		Debug.Log (
-			"Tag status for Jellyfish: " + name + "\n" +
-			"TOP LEVEL TAGS\n" +
-			"Appearance = " + appearance + "\n" +
-			"Style = " + style + "\n" +
-			"BlackHole = " + blackhole + "\n" +
-			"Resize = " + resize + "\n" +
-			"Title = " + title + "\n" +
-			"Bungee = " + bungee + "\n\n" +
-			"NESTED TAGS (parent in brackets)\n" +
-			"Graphic (Style) = " + styleGraphic + "\n" +
-			"Graphic (BlackHole) = " + blackholeGraphic + "\n" +
-			"HotArea (BlackHole) = " + blackholeHotArea + "\n" +
-			"Graphic (Resize) = " + resizeGraphic + "\n" +
-			"HotArea (Resize) = " + resizeHotArea + "\n" +
-			"Font (Title) = " + titleFont + "\n" +
-			"Connector (Bungee) = " + bungeeConnector + "\n" +
-			"Marker (Bungee->Connector) = " + bungeeConnectorMarker + "\n" +
-			"Line (Bungee) = " + bungeeLine + "\n\n"
-			);
-	}
 
 	// Method checks attributes & nested tags inside <Jellyfish> tag
 	void getJellyfish(XmlReader myReader, string elementName) {
@@ -337,9 +328,9 @@ public class JellyfishXMLgui : MonoBehaviour {
 				appearance = true;
 				getAppearance(myReader,elementName);
 				myReader.Read ();
-				/*if(secondPass) {
+				if(secondPass) {
 					API.Move(thisSession,"..", ref iFlags);
-				}*/
+				}
 				break;
 			case "Jellyfish":
 			case "":							
@@ -348,9 +339,6 @@ public class JellyfishXMLgui : MonoBehaviour {
 				displayWarning(myReader,elementName,"Jellyfish");	
 				break;
 			}
-		}
-		if(secondPass) {
-			API.Move(thisSession,"..", ref iFlags);
 		}
 	}
 	
@@ -426,16 +414,26 @@ public class JellyfishXMLgui : MonoBehaviour {
 				displayWarning(myReader,elementName,"Appearance");	
 				break;
 			}
-		}
-		if(secondPass) {
-			API.Move(thisSession,"..", ref iFlags);
+			// Move the session cursor back up if neccessary
+			if(secondPass) {
+				if(elementName == "BlackHole" || elementName == "Style" ||
+				   elementName == "Resize" || elementName == "Title" || elementName == "Bungee")
+				{
+					API.Move(thisSession,"..", ref iFlags);
+				}
+			}
 		}
 	}
 
 	// Method checks attributes & nested tags inside <BlackHole> tag
 	void getBlackHole(XmlReader myReader,string elementName) {
 
+
+
 		while (myReader.NodeType != XmlNodeType.EndElement) {
+
+			graphicCount++;
+
 
 			// Write the Jellyfish element/attribute details into ocean
 			if(secondPass && !blackholeWritten) {
@@ -459,7 +457,7 @@ public class JellyfishXMLgui : MonoBehaviour {
 			switch(elementName)	{
 			case "Graphic":
 				blackholeGraphic = true;
-			
+		
 				// Write nested graphic element (which has no children)
 				if(secondPass && !blackholeGraphicWritten) {
 					// Element
@@ -472,21 +470,33 @@ public class JellyfishXMLgui : MonoBehaviour {
 					API.Write(thisSession,"Hover",myReader.GetAttribute("Hover"),ref iFlags);
 					API.Write(thisSession,"Selected",myReader.GetAttribute("Selected"),ref iFlags);
 					API.Write(thisSession,"Disabled",myReader.GetAttribute("Disabled"),ref iFlags);
+					API.Move(thisSession,"..",ref iFlags);
 					blackholeGraphicWritten = true;
 				}
-				myReader.Read ();
 
-				/*
-				 * DEBUGGING:
-				 * Find out where the cursor is at each step.
-				 * 
-				 * This goes when you try to move ".." here
-				 * 
-				 * */
-			
+				myReader.Read ();
 				break;
 			case "HotArea":
 				blackholeHotArea = true;
+				//getHotArea(myReader,elementName,"BlackHole");
+
+				if(secondPass && !blackholeHotAreaWritten) {
+					// Element
+					iFlags = PIXE_PSML_WRITE_ELEMENT;
+					API.Write(thisSession,myReader.Name,null,ref iFlags);
+					API.Move(thisSession,myReader.Name, ref iFlags);
+					// Attributes
+					iFlags = PIXE_PSML_WRITE_ATTRIBUTE;
+					API.Write(thisSession,"X",myReader.GetAttribute("X"),ref iFlags);
+					API.Write(thisSession,"Y",myReader.GetAttribute("Y"),ref iFlags);
+					API.Write(thisSession,"Width",myReader.GetAttribute("Width"),ref iFlags);
+					API.Write(thisSession,"Height",myReader.GetAttribute("Height"),ref iFlags);
+					API.Move(thisSession,"..", ref iFlags);
+					blackholeHotAreaWritten = true;
+				}
+
+
+
 				myReader.Read ();
 				break;
 			case "BlackHole":
@@ -496,9 +506,6 @@ public class JellyfishXMLgui : MonoBehaviour {
 				displayWarning(myReader,elementName,"BlackHole");
 				break;
 			}
-		}
-		if(secondPass) {
-			API.Move(thisSession,"..", ref iFlags);
 		}
 	}
 
@@ -527,7 +534,7 @@ public class JellyfishXMLgui : MonoBehaviour {
 			switch(elementName)	{
 			case "Graphic":
 				resizeGraphic = true;
-				/*
+
 				// Write nested graphic element (which has no children)
 				if(secondPass && !resizeGraphicWritten) {
 					// Element
@@ -540,14 +547,15 @@ public class JellyfishXMLgui : MonoBehaviour {
 					API.Write(thisSession,"Hover",myReader.GetAttribute("Hover"),ref iFlags);
 					API.Write(thisSession,"Selected",myReader.GetAttribute("Selected"),ref iFlags);
 					API.Write(thisSession,"Disabled",myReader.GetAttribute("Disabled"),ref iFlags);
+					API.Move(thisSession,"..",ref iFlags);
 					resizeGraphicWritten = true;
 				}
-*/
+
 				myReader.Read ();
 				break;
 			case "HotArea":
 				resizeHotArea = true;
-				//getHotArea(myReader,elementName,"Resize");
+				getHotArea(myReader,elementName,"Resize");
 				myReader.Read ();
 				break;
 			case "Resize":
@@ -557,9 +565,6 @@ public class JellyfishXMLgui : MonoBehaviour {
 				displayWarning(myReader,elementName,"Resize");
 				break;
 			}
-		}
-		if(secondPass) {
-			API.Move(thisSession,"..", ref iFlags);
 		}
 	}
 
@@ -590,7 +595,7 @@ public class JellyfishXMLgui : MonoBehaviour {
 			switch(elementName)	{
 			case "Graphic":
 				styleGraphic = true;
-			/*
+			
 
 				if(secondPass && !styleGraphicWritten) {
 					// Element
@@ -602,16 +607,13 @@ public class JellyfishXMLgui : MonoBehaviour {
 					API.Write(thisSession,"Default",myReader.GetAttribute("Default"),ref iFlags);
 					API.Write(thisSession,"Ratio_50",myReader.GetAttribute("Ratio_50"),ref iFlags);
 					API.Write(thisSession,"Ratio_150",myReader.GetAttribute("Ratio_150"),ref iFlags);
-
+					API.Move(thisSession,"..",ref iFlags);
 					styleGraphicWritten = true;
 				}
-				*/
+
 				myReader.Read ();
 
-				//myReader.Read ();
-				/*if(secondPass) {
-					API.Move(thisSession,"..", ref iFlags);
-				}*/
+			
 				break;
 			case "Style":
 			case "":								
@@ -620,9 +622,6 @@ public class JellyfishXMLgui : MonoBehaviour {
 				displayWarning(myReader,elementName,"Style");
 				break;
 			}
-		}
-		if(secondPass) {
-			API.Move(thisSession,"..", ref iFlags);
 		}
 	}
 
@@ -653,6 +652,7 @@ public class JellyfishXMLgui : MonoBehaviour {
 			API.Write(thisSession,"Y",myReader.GetAttribute("Y"),ref iFlags);
 			API.Write(thisSession,"Width",myReader.GetAttribute("Width"),ref iFlags);
 			API.Write(thisSession,"Height",myReader.GetAttribute("Height"),ref iFlags);
+			API.Move(thisSession,"..", ref iFlags);
 
 			switch(sParent) {
 			case "BlackHole":
@@ -666,85 +666,7 @@ public class JellyfishXMLgui : MonoBehaviour {
 			}
 		}
 	}
-
-	void getGraphic(XmlReader myReader,string elementName, string sParent) {
-		
-		//while (myReader.NodeType != XmlNodeType.EndElement) {
-
-			/*bool bWritten = false;
-			switch(sParent) {
-			case "BlackHole":
-				bWritten = blackholeGraphicWritten;
-				break;
-			case "Style":
-				bWritten = styleGraphicWritten;
-				break;
-			case "Resize":
-				bWritten = resizeGraphicWritten;
-				break;
-			default:
-				Debug.Log("ERROR = Unknown Graphic nested tag.");
-				return;
-				break;
-			}*/
-
-			// Write the Jellyfish element/attribute details into ocean
-			if(secondPass && !blackholeGraphicWritten) {
-				
-				// Element
-				iFlags = PIXE_PSML_WRITE_ELEMENT;
-				API.Write(thisSession,myReader.Name,null,ref iFlags);
-				API.Move(thisSession,myReader.Name, ref iFlags);
-				
-				// Attributes
-				iFlags = PIXE_PSML_WRITE_ATTRIBUTE;
-				API.Write(thisSession,"Default",myReader.GetAttribute("Default"),ref iFlags);
-				if(sParent == "Style") {
-					API.Write(thisSession,"Ratio_50",myReader.GetAttribute("Ratio_50"),ref iFlags);
-					API.Write(thisSession,"Ratio_150",myReader.GetAttribute("Ratio_150"),ref iFlags);
-				}
-				else if(sParent == "BlachHole" || sParent == "Resize") {
-					API.Write(thisSession,"Hover",myReader.GetAttribute("Hover"),ref iFlags);
-					API.Write(thisSession,"Selected",myReader.GetAttribute("Selected"),ref iFlags);
-					API.Write(thisSession,"Disabled",myReader.GetAttribute("Disabled"),ref iFlags);
-				}
-				blackholeGraphicWritten = true;
-			
-				/*switch(sParent) {
-				case "BlackHole":
-					blackholeGraphicWritten = true;;
-					break;
-				case "Style":
-					styleGraphicWritten = true;
-					break;
-				case "Resize":
-					resizeGraphicWritten = true;
-					break;
-				default:
-					Debug.Log("ERROR = Unknown Graphic nested tag.");
-					return;
-					break;
-				}
-				bWritten = true;*/
-			}
-
-			// Process exepected nested tags: None
-			/*
-			myReader.Read ();	
-			elementName=myReader.Name;
-			switch(elementName)	{
-			case "Graphic":
-			case "":								
-				break;
-			default:			 
-				displayWarning(myReader,elementName,"Graphic");
-				break;
-			}
-			*/
-		//}
-	}
-
-
+	
 	// Method checks attributes & nested tags inside <Title> tag
 	void getTitle(XmlReader myReader,string elementName) {
 		
@@ -775,6 +697,24 @@ public class JellyfishXMLgui : MonoBehaviour {
 			switch(elementName)	{
 			case "Font":
 				titleFont = true;
+
+
+				// Write the Jellyfish element/attribute details into ocean
+				if(secondPass && !titleFontWritten) {
+					
+					// Element
+					iFlags = PIXE_PSML_WRITE_ELEMENT;
+					API.Write(thisSession,myReader.Name,null,ref iFlags);
+					API.Move(thisSession,myReader.Name, ref iFlags);
+					
+					// Attributes
+					iFlags = PIXE_PSML_WRITE_ATTRIBUTE;
+					API.Write(thisSession,"Face",myReader.GetAttribute("Face"),ref iFlags);
+					API.Write(thisSession,"Weight",myReader.GetAttribute("Weight"),ref iFlags);
+					API.Write(thisSession,"Size",myReader.GetAttribute("Size"),ref iFlags);
+					API.Write(thisSession,"Colour",myReader.GetAttribute("Colour"),ref iFlags);
+					titleFontWritten = true;
+				}
 				myReader.Read ();
 				break;
 			case "Title":
@@ -784,9 +724,6 @@ public class JellyfishXMLgui : MonoBehaviour {
 				displayWarning(myReader,elementName,"Title");
 				break;
 			}
-		}
-		if(secondPass) {
-			API.Move(thisSession,"..", ref iFlags);
 		}
 	}
 
@@ -817,6 +754,25 @@ public class JellyfishXMLgui : MonoBehaviour {
 				break;
 			case "Line":
 				bungeeLine = true;
+
+				// Write the Jellyfish element/attribute details into ocean
+				if(secondPass && !bungeeLineWritten) {
+					
+					// Element
+					iFlags = PIXE_PSML_WRITE_ELEMENT;
+					API.Write(thisSession,myReader.Name,null,ref iFlags);
+					API.Move(thisSession,myReader.Name, ref iFlags);
+					
+					// Attributes
+					iFlags = PIXE_PSML_WRITE_ATTRIBUTE;
+					API.Write(thisSession,"Colour",myReader.GetAttribute("Colour"),ref iFlags);
+					API.Write(thisSession,"MaxWidth",myReader.GetAttribute("MaxWidth"),ref iFlags);
+					API.Write(thisSession,"WidthPerLayer",myReader.GetAttribute("WidthPerLayer"),ref iFlags);
+					API.Write(thisSession,"AvoidJellyfish",myReader.GetAttribute("AvoidJellyfish"),ref iFlags);
+					API.Write(thisSession,"MergeLinesAtSameLevel",myReader.GetAttribute("MergeLinesAtSameLevel"),ref iFlags);
+					bungeeLineWritten = true;
+				}
+			
 				myReader.Read ();
 				break;
 			case "Bungee":
@@ -826,9 +782,6 @@ public class JellyfishXMLgui : MonoBehaviour {
 				displayWarning(myReader,elementName,"Bungee");
 				break;
 			}
-		}
-		if(secondPass) {
-			API.Move(thisSession,"..", ref iFlags);
 		}
 	}
 
@@ -869,5 +822,65 @@ public class JellyfishXMLgui : MonoBehaviour {
 		// Reader skips this unrecognised element (and all child elements of this tag)
 		myReader.Skip();
 	}
+
 	
+	private void resetTags()
+	{
+		jellyfishWritten = false;
+		appearance = false;
+		appearanceWritten = false;
+		style = false;
+		styleWritten = false;
+		blackhole = false;
+		blackholeWritten = false;
+		resize = false;
+		resizeWritten = false;
+		title = false;
+		titleWritten = false;
+		titleFont = false;
+		titleFontWritten = false;
+		bungee = false;
+		bungeeWritten = false;
+		bungeeConnector = false;
+		bungeeConnectorWritten = false;
+		bungeeConnectorMarker = false;
+		bungeeConnectorMarkerWritten = false;
+		bungeeLine = false;
+		bungeeLineWritten = false;
+		blackholeGraphic = false;
+		blackholeGraphicWritten = false;
+		blackholeHotArea = false;
+		blackholeHotAreaWritten = false;
+		styleGraphic = false;
+		styleGraphicWritten = false;
+		resizeGraphic = false;
+		resizeGraphicWritten = false;
+		resizeHotArea = false;
+		resizeHotAreaWritten = false;
+	}
+	
+	private void tagsToLog(string name)
+	{
+		Debug.Log (
+			"Tag status for Jellyfish: " + name + "\n" +
+			"TOP LEVEL TAGS\n" +
+			"Appearance = " + appearance + "\n" +
+			"Style = " + style + "\n" +
+			"BlackHole = " + blackhole + "\n" +
+			"Resize = " + resize + "\n" +
+			"Title = " + title + "\n" +
+			"Bungee = " + bungee + "\n\n" +
+			"NESTED TAGS (parent in brackets)\n" +
+			"Graphic (Style) = " + styleGraphic + "\n" +
+			"Graphic (BlackHole) = " + blackholeGraphic + "\n" +
+			"HotArea (BlackHole) = " + blackholeHotArea + "\n" +
+			"Graphic (Resize) = " + resizeGraphic + "\n" +
+			"HotArea (Resize) = " + resizeHotArea + "\n" +
+			"Font (Title) = " + titleFont + "\n" +
+			"Connector (Bungee) = " + bungeeConnector + "\n" +
+			"Marker (Bungee->Connector) = " + bungeeConnectorMarker + "\n" +
+			"Line (Bungee) = " + bungeeLine + "\n\n"
+			);
+	}
+
 }
