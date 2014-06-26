@@ -37,7 +37,7 @@ public class Main : MonoBehaviour {
 		Session session = API.sessionList [thisSession]; 
 		List<Molecule> ocean = API.oceanList [session.Ocean];
 
-		//PSML.Load ();
+		PSML.Load ();
 
 	}
 	

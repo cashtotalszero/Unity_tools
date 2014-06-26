@@ -39,7 +39,7 @@ public class JellyfishXMLgui : MonoBehaviour {
 	const int PIXE_RESET = -1;
 
 	public Heap API;
-	public XmlValidator XmlValidator;
+	//public XmlValidator XmlValidator;
 
 	// xml file to read in must be stated in XmlReader declaration
 	XmlReader myReader;
@@ -84,22 +84,15 @@ public class JellyfishXMLgui : MonoBehaviour {
 	private string myLog;
 	string jellyfishName;
 
-	int iOceanIndex = PIXE_RESET;			
-	int thisSession = PIXE_RESET;
+	int iOceanIndex = PIXE_RESET;				// The ocean to read the xml file into		
+	int thisSession = PIXE_RESET;				// Holds the session handle ID
 	int iFlags = PIXE_PSML_UNSET_FLAG;
 	bool secondPass = false;
-
-	private int graphicCount;
 
 	public bool success = false;
 	public bool load = false;
 	string kapow = "NO GOOD";
-
-	void Start()
-	{
-		graphicCount = 0;
-
-	}
+	
 
 	void Update() {
 		if (success) {
@@ -115,56 +108,38 @@ public class JellyfishXMLgui : MonoBehaviour {
 		myLog = "------------------------------------------------------------\nWARNINGS:";
 		int i;
 
+		// Load the psml xml (must be saved as a .txt file in the resources folder) as a TextAsset 
 		TextAsset psml = (TextAsset)Resources.Load("psml",typeof(TextAsset));
 		if(psml == null)
 		{
 			Debug.LogError("Could not load text asset!!!");
 		}
-		//string xmlDoc = psml.text;
 		StringReader xmlDoc = new StringReader (psml.text);
 
-	
-
-		//xmlDoc.Read ();
-
-		//StringReader rawXml = new StringReader (psml);
-		//string xmlDoc = psml.text;			// Store on heap??
-
-		//XmlDocument xmlDoc = new XmlDocument ();
-		//xmlDoc.Load (new StringReader (psml.text));
-
-		//if (XmlValidator.validateXML ("Assets/psml.xml")) {
-	
-			if (XmlValidator.validateXML (psml.text)) {
-
-
-
+		// First ensure xml is properly formed.
+		if (xmlFormValid (psml.text)) {
 			load = true;
-			// Makes 2 passes
-			for (i=0;i<2;i++) {
-				//myReader = XmlReader.Create ("Assets/psml.xml");
+			// Make 2 passes: 1st to check all elements/attributes are valid; 2nd to read them into memory
+			for (i=0; i<2; i++) {
 
+				// Create an xml reader to read through the psml file
 				myReader = XmlReader.Create (new StringReader(psml.text));
-
-
 				while (myReader.Read()) {
 
-					// Skip the Xml header
+					// Skip the xml declaration header...
 					if (myReader.NodeType == XmlNodeType.XmlDeclaration) {
 						myReader.Skip ();
 					}
-					// Step into the root node (expecting <psml>)
+					// ...and step into the root node (expecting <psml>)
 					if (myReader.NodeType == XmlNodeType.Element && myReader.Name == "psml") {
 
-						// On the 2nd pass - write the root node into the Jellyfish ocean
-						if(secondPass) {
-
-							// Initialise the session and write the root node
+						// On the 2nd pass: Initialise the session handle & write the root node into specified ocean
+						if(secondPass) { 
 							API.Initialise (ref thisSession, iOceanIndex, ref iFlags);
 							iFlags = PIXE_PSML_WRITE_ELEMENT;
 							API.Write(thisSession,myReader.Name,null,ref iFlags);
 						}
-
+						// Then read through all the nested elements
 						while (myReader.NodeType != XmlNodeType.EndElement) {
 							myReader.Read ();			
 							elementName = myReader.Name;	
@@ -177,7 +152,6 @@ public class JellyfishXMLgui : MonoBehaviour {
 								resetTags ();
 							    // Process the jellyfish and output tags statuses to log
 								getJellyfish (myReader, elementName);
-							
 								if(secondPass) {
 									API.Move(thisSession,"..", ref iFlags);
 								}
@@ -210,23 +184,15 @@ public class JellyfishXMLgui : MonoBehaviour {
 					Debug.Log (myLog);
 				}
 				secondPass = true;
+				myReader.Close();
 			}
 		}
-		// Display the entire ocean at the end
+		// Save the loaded ocean back into XML
 		Session session = API.sessionList [thisSession]; 
 		List<Molecule> ocean = API.oceanList [session.Ocean];
+		Save (thisSession, ref ocean); 
 
-		/*Molecule current;
-		int length = ocean.Count;
-		for (i=0; i<length; i++) {
-			current = ocean[i];
-			Debug.Log(i + " NAME: " + current.Name + " TYPE: " + current.Type +
-			          " VALUE: " + current.Value + " DATA: " + current.Data);
-		}
-*/
-
-
-		//Save (thisSession, ref ocean); 
+		// Read test
 		iFlags = PIXE_PSML_READ_ATTRIBUTE;
 		object toRead = API.Read (thisSession, "psml://psml/Jellyfish/Appearance/BlackHole/HotArea/X", ref iFlags);
 		Debug.Log ("EXPECTING 85.4: " + toRead);
@@ -236,9 +202,8 @@ public class JellyfishXMLgui : MonoBehaviour {
 			success = true;
 		}
 	}
-
-
-
+	
+	// Saves ocean into an xml file
 	public void Save(int iSessionIndex, ref List<Molecule> ocean) {
 
 		// Ensure session cursor is set to the root node
@@ -253,22 +218,20 @@ public class JellyfishXMLgui : MonoBehaviour {
 			IndentChars = "\t",
 			NewLineOnAttributes = true
 		};
+		// NEEDS TO BE SET UP AS TEXT ASSET TO WORK ON MOBILE DEVICES - INCOMPLETE
 		XmlWriter xmlWriter = XmlWriter.Create("Assets/SAVED.xml",xmlWriterSettings);
 
 		// Write the root node
 		xmlWriter.WriteStartDocument();
 		xmlWriter.WriteStartElement(ocean[session.Cursor].Name);
-
-	
-
+			
+		// Save all nested elements
 		saveNestedElements (xmlWriter, ref session, ref ocean,"Jellyfish");
 
-	
+		// Write document end & close the reader
 		xmlWriter.WriteEndElement();
-
 		xmlWriter.WriteEndDocument();
 		xmlWriter.Close();
-
 	}
 
 	private void saveNestedElements(XmlWriter xmlWriter, ref Session session, ref List<Molecule> ocean, string sParent)
@@ -276,17 +239,6 @@ public class JellyfishXMLgui : MonoBehaviour {
 		// Look for any elements in the current Drop
 		if(API.hasElements (ref session, ref ocean, PIXE_PSML_ELEMENT)) {
 			List<string> nestedElements = API.getElements (ref session, ref ocean, PIXE_PSML_ELEMENT);
-
-			/*
-			Debug.Log("Parent elements: ");
-			foreach(string ssElement in nestedElements) {
-				Debug.Log(ssElement);
-			}
-			Debug.Log("****************");
-*/
-
-	
-
 
 			// Move into each in turn
 			foreach(string sElement in nestedElements) {
@@ -309,13 +261,8 @@ public class JellyfishXMLgui : MonoBehaviour {
 					// Check for any nested elements
 					if(API.hasElements (ref session, ref ocean, PIXE_PSML_ELEMENT)) {
 						List<string> nestedElements2 = API.getElements (ref session, ref ocean, PIXE_PSML_ELEMENT);
-						/*
-						Debug.Log("Nested elements: ");
-						foreach(string sssElement in nestedElements2) {
-							Debug.Log(sssElement);
-						}
-						Debug.Log("****************");
-*/
+
+						// SWAP OUT FOR EACH (it's too slow!)
 						foreach(string sNestedElement in nestedElements2) {
 							saveNestedElements (xmlWriter, ref session, ref ocean, sNestedElement);
 						}
@@ -327,7 +274,6 @@ public class JellyfishXMLgui : MonoBehaviour {
 			}
 		}
 	}
-
 
 	// Method checks attributes & nested tags inside <Jellyfish> tag
 	void getJellyfish(XmlReader myReader, string elementName) {
@@ -376,15 +322,15 @@ public class JellyfishXMLgui : MonoBehaviour {
 	void getAppearance(XmlReader myReader, string elementName) {
 
 		while (myReader.NodeType != XmlNodeType.EndElement) {
-		
-			// Write the Jellyfish element/attribute details into ocean
-			if(secondPass && !appearanceWritten) {
+	
+			// ON FIRST PASS - CHECK ALL ATTRIBUTES ARE PRESENT - INCOMPLETE
 
-				// Element
+			// On 2nd pass: Write the Jellyfish <Appearance> details into ocean:
+			if(secondPass && !appearanceWritten) {
+				// The Element Header
 				iFlags = PIXE_PSML_WRITE_ELEMENT;
 				API.Write(thisSession,myReader.Name,null,ref iFlags);
 				API.Move(thisSession,myReader.Name, ref iFlags);
-
 				// Attributes
 				iFlags = PIXE_PSML_WRITE_ATTRIBUTE;
 				API.Write(thisSession,"Status",myReader.GetAttribute("Status"),ref iFlags);
@@ -393,84 +339,80 @@ public class JellyfishXMLgui : MonoBehaviour {
 				API.Write(thisSession,"Mask",myReader.GetAttribute("Mask"),ref iFlags);
 				appearanceWritten = true;
 			}
-			// Process exepected nested tags: <BlackHole>,<Style>,<Resize>,<Title>,<Bungee>
+
+			// Process expected nested tags: <BlackHole>,<Style>,<Resize>,<Title>,<Bungee>
 			myReader.Read ();	
 			elementName=myReader.Name;
 			switch(elementName)	{
 			case "BlackHole":
 				blackhole = true;
 				getBlackHole(myReader,elementName);
-				myReader.Read ();
-				/*if(secondPass) {
-					API.Move(thisSession,"..", ref iFlags);
-				}*/
+				//myReader.Read ();
 				break;
 			case "Style":
 				style = true;
 				getStyle (myReader,elementName);
-				myReader.Read ();
-				/*if(secondPass) {
-					API.Move(thisSession,"..", ref iFlags);
-				}*/
+				//myReader.Read ();
 				break;
 			case "Resize":
 				resize = true;
 				getResize (myReader,elementName);
-				myReader.Read ();
-				/*if(secondPass) {
-					API.Move(thisSession,"..", ref iFlags);
-				}*/
+				//myReader.Read ();
 				break;
 			case "Title":
 				title = true;
 				getTitle (myReader,elementName);
-				myReader.Read ();
-				/*if(secondPass) {
-					API.Move(thisSession,"..", ref iFlags);
-				}*/
+				//myReader.Read ();
 				break;
 			case "Bungee":
 				bungee = true;
 				getBungee (myReader,elementName);
-				myReader.Read ();
-				/*if(secondPass) {
-					API.Move(thisSession,"..", ref iFlags);
-				}*/
+				//myReader.Read ();
 				break;
-			case "Appearance":						// Do nothing with parent element.
-			case "":								// Likewise with non tags.
+			case "Appearance":							// Do nothing with parent element.
+			case "":									// Likewise with non tags.
 				break;
 			default:			 
 				displayWarning(myReader,elementName,"Appearance");	
 				break;
 			}
-			// Move the session cursor back up if neccessary
+			// For any nested elements: move the session cursor back up to the <Appearance> node & increment reader
+			if(elementName == "BlackHole" || elementName == "Style" ||
+			   elementName == "Resize" || elementName == "Title" || elementName == "Bungee")
+			{
+				if(secondPass) {	
+					API.Move(thisSession,"..", ref iFlags);
+				}
+				myReader.Read();
+			}
+			/*
 			if(secondPass) {
 				if(elementName == "BlackHole" || elementName == "Style" ||
 				   elementName == "Resize" || elementName == "Title" || elementName == "Bungee")
 				{
 					API.Move(thisSession,"..", ref iFlags);
+					myReader.Read();
 				}
 			}
+			*/
 		}
 	}
-
+	
 	// Method checks attributes & nested tags inside <BlackHole> tag
 	void getBlackHole(XmlReader myReader,string elementName) {
 
-
-
 		while (myReader.NodeType != XmlNodeType.EndElement) {
 
-			graphicCount++;
+			// ON FIRST PASS - CHECK ALL ATTRIBUTES ARE PRESENT - INCOMPLETE
 
-
-			// Write the Jellyfish element/attribute details into ocean
+			// On 2nd pass: Write the <BlackHole> details into the specified ocean
 			if(secondPass && !blackholeWritten) {
-				// Element
+
+				// Element Header
 				iFlags = PIXE_PSML_WRITE_ELEMENT;
 				API.Write(thisSession,myReader.Name,null,ref iFlags);
 				API.Move(thisSession,myReader.Name, ref iFlags);
+
 				// Attributes
 				iFlags = PIXE_PSML_WRITE_ATTRIBUTE;
 				API.Write(thisSession,"X",myReader.GetAttribute("X"),ref iFlags);
@@ -478,8 +420,6 @@ public class JellyfishXMLgui : MonoBehaviour {
 				API.Write(thisSession,"Width",myReader.GetAttribute("Width"),ref iFlags);
 				API.Write(thisSession,"Height",myReader.GetAttribute("Height"),ref iFlags);
 				blackholeWritten = true;
-
-
 			}
 			// Process exepected nested tags: <Graphic>,<HotArea>
 			myReader.Read ();	
@@ -487,46 +427,12 @@ public class JellyfishXMLgui : MonoBehaviour {
 			switch(elementName)	{
 			case "Graphic":
 				blackholeGraphic = true;
-		
-				// Write nested graphic element (which has no children)
-				if(secondPass && !blackholeGraphicWritten) {
-					// Element
-					iFlags = PIXE_PSML_WRITE_ELEMENT;
-					API.Write(thisSession,myReader.Name,null,ref iFlags);
-					API.Move(thisSession,myReader.Name, ref iFlags);
-					// Attributes
-					iFlags = PIXE_PSML_WRITE_ATTRIBUTE;
-					API.Write(thisSession,"Default",myReader.GetAttribute("Default"),ref iFlags);
-					API.Write(thisSession,"Hover",myReader.GetAttribute("Hover"),ref iFlags);
-					API.Write(thisSession,"Selected",myReader.GetAttribute("Selected"),ref iFlags);
-					API.Write(thisSession,"Disabled",myReader.GetAttribute("Disabled"),ref iFlags);
-					API.Move(thisSession,"..",ref iFlags);
-					blackholeGraphicWritten = true;
-				}
-
+				getBlackHoleGrpahic(myReader,elementName);
 				myReader.Read ();
 				break;
 			case "HotArea":
 				blackholeHotArea = true;
-				//getHotArea(myReader,elementName,"BlackHole");
-
-				if(secondPass && !blackholeHotAreaWritten) {
-					// Element
-					iFlags = PIXE_PSML_WRITE_ELEMENT;
-					API.Write(thisSession,myReader.Name,null,ref iFlags);
-					API.Move(thisSession,myReader.Name, ref iFlags);
-					// Attributes
-					iFlags = PIXE_PSML_WRITE_ATTRIBUTE;
-					API.Write(thisSession,"X",myReader.GetAttribute("X"),ref iFlags);
-					API.Write(thisSession,"Y",myReader.GetAttribute("Y"),ref iFlags);
-					API.Write(thisSession,"Width",myReader.GetAttribute("Width"),ref iFlags);
-					API.Write(thisSession,"Height",myReader.GetAttribute("Height"),ref iFlags);
-					API.Move(thisSession,"..", ref iFlags);
-					blackholeHotAreaWritten = true;
-				}
-
-
-
+				getHotArea(myReader,elementName,"BlackHole");
 				myReader.Read ();
 				break;
 			case "BlackHole":
@@ -539,6 +445,56 @@ public class JellyfishXMLgui : MonoBehaviour {
 		}
 	}
 
+	void getBlackHoleGrpahic(XmlReader myReader, string elementName)
+	{
+		// FIRST PASS ATTRIBUTE CHECK TO BE ADDED
+		
+		// Write the BlackHole <Graphic> node into the specified ocean
+		if(secondPass && !blackholeGraphicWritten) {
+			
+			// The Element Header
+			iFlags = PIXE_PSML_WRITE_ELEMENT;
+			API.Write(thisSession,myReader.Name,null,ref iFlags);
+			API.Move(thisSession,myReader.Name, ref iFlags);
+			
+			// Attributes
+			iFlags = PIXE_PSML_WRITE_ATTRIBUTE;
+			API.Write(thisSession,"Default",myReader.GetAttribute("Default"),ref iFlags);
+			API.Write(thisSession,"Hover",myReader.GetAttribute("Hover"),ref iFlags);
+			API.Write(thisSession,"Selected",myReader.GetAttribute("Selected"),ref iFlags);
+			API.Write(thisSession,"Disabled",myReader.GetAttribute("Disabled"),ref iFlags);
+			API.Move(thisSession,"..",ref iFlags);
+			blackholeGraphicWritten = true;
+		}
+		// NOTE, there are currently no nested elements in this node.
+		return;
+	}
+
+	void getResizeGrpahic(XmlReader myReader, string elementName)
+	{
+		// FIRST PASS ATTRIBUTE CHECK TO BE ADDED
+
+		// On 2nd pass: Write Resize <Graphic> details into the specified ocean
+		if(secondPass && !resizeGraphicWritten) {
+
+			// The Element Header
+			iFlags = PIXE_PSML_WRITE_ELEMENT;
+			API.Write(thisSession,myReader.Name,null,ref iFlags);
+			API.Move(thisSession,myReader.Name, ref iFlags);
+
+			// Attributes
+			iFlags = PIXE_PSML_WRITE_ATTRIBUTE;
+			API.Write(thisSession,"Default",myReader.GetAttribute("Default"),ref iFlags);
+			API.Write(thisSession,"Hover",myReader.GetAttribute("Hover"),ref iFlags);
+			API.Write(thisSession,"Selected",myReader.GetAttribute("Selected"),ref iFlags);
+			API.Write(thisSession,"Disabled",myReader.GetAttribute("Disabled"),ref iFlags);
+			API.Move(thisSession,"..",ref iFlags);
+			resizeGraphicWritten = true;
+		}
+		// NOTE, there are currently no nested elements in this node.
+		return;
+	}
+
 	// Method checks attributes & nested tags inside <Resize> tag
 	void getResize(XmlReader myReader,string elementName) {
 		
@@ -546,10 +502,12 @@ public class JellyfishXMLgui : MonoBehaviour {
 
 			// Write the Jellyfish element/attribute details into ocean
 			if(secondPass && !resizeWritten) {
+
 				// Element
 				iFlags = PIXE_PSML_WRITE_ELEMENT;
 				API.Write(thisSession,myReader.Name,null,ref iFlags);
 				API.Move(thisSession,myReader.Name, ref iFlags);
+
 				// Attributes
 				iFlags = PIXE_PSML_WRITE_ATTRIBUTE;
 				API.Write(thisSession,"MaxX",myReader.GetAttribute("MaxX"),ref iFlags);
@@ -564,7 +522,8 @@ public class JellyfishXMLgui : MonoBehaviour {
 			switch(elementName)	{
 			case "Graphic":
 				resizeGraphic = true;
-
+				getResizeGrpahic(myReader,elementName);
+				/*
 				// Write nested graphic element (which has no children)
 				if(secondPass && !resizeGraphicWritten) {
 					// Element
@@ -580,7 +539,7 @@ public class JellyfishXMLgui : MonoBehaviour {
 					API.Move(thisSession,"..",ref iFlags);
 					resizeGraphicWritten = true;
 				}
-
+*/
 				myReader.Read ();
 				break;
 			case "HotArea":
@@ -727,7 +686,6 @@ public class JellyfishXMLgui : MonoBehaviour {
 			switch(elementName)	{
 			case "Font":
 				titleFont = true;
-
 
 				// Write the Jellyfish element/attribute details into ocean
 				if(secondPass && !titleFontWritten) {
@@ -911,6 +869,29 @@ public class JellyfishXMLgui : MonoBehaviour {
 			"Marker (Bungee->Connector) = " + bungeeConnectorMarker + "\n" +
 			"Line (Bungee) = " + bungeeLine + "\n\n"
 			);
+	}
+
+	// Method ensures provided XML file is properly formed
+	private bool xmlFormValid(string psmlFile)
+	{
+		//XmlReader psml = XmlReader.Create(psmlFile);
+		XmlReader psml = XmlReader.Create(new StringReader(psmlFile));
+
+		// Try loading the XML document...
+		try
+		{
+			XmlDocument xmlDoc = new XmlDocument();
+			xmlDoc.Load(psml);
+
+			// ...if no exceptions generated this is valid XML..
+			return true;
+		}
+		// ...return false if invalid XML.
+		catch(System.Xml.XmlException exception)
+		{
+			Debug.Log("ERROR = Invalid XML file provided.\n" + exception.ToString());
+			return false;
+		}
 	}
 
 }

@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<psml Version="889923"
-xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-xsi:noNamespaceSchemaLocation="psml.xsd">
+<psml Version="889923">
 
 <Jellyfish
 	Name="PS1X1"
