@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ArrayOfMovie xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <Movie
+      Title="Starship Troopers"
+      Rating="6.9">
+      <Appearance Yo="Do" />
+  </Movie>
+  <Movie Title="Ace Ventura"
+      Rating="5.4">
+      <Appearance Yo="Ray" />
+  </Movie>
+  <Movie Title="Alex Wins"
+      Rating="9.9">
+      <Appearance Yo="Egon" />
+  </Movie>
+</ArrayOfMovie>
