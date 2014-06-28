@@ -17,7 +17,6 @@ public class Main : MonoBehaviour {
 		 * TO RUN - Just uncomment the example you wish to run...
 		 * */
 
-		//PSML.LoadPsml (ref thisSession);
 		psmlExample ();
 		//example ();
 	}
