@@ -202,7 +202,7 @@ public class Tests : MonoBehaviour {
 		}
 
 		iFlags = PIXE_PSML_UNSET_FLAG;
-		Jelly.freeSession (ref thisSession, ref iFlags);
+		Jelly.freeSession (ref thisSession);
 	}
 
 	// Complex read & write which will involve movement of drops.
@@ -308,7 +308,7 @@ public class Tests : MonoBehaviour {
 			          " VALUE: " + current.Value + " DATA: " + current.Data);
 		}
 
-		Jelly.freeSession (ref thisSession, ref iFlags);
+		Jelly.freeSession (ref thisSession);
 	}
 	/*
 	// Test 3 is similar to test 2 but forces the root node to be moved
@@ -576,7 +576,7 @@ public class Tests : MonoBehaviour {
 			          " VALUE: " + current.Value + " DATA: " + current.Data);
 		}
 
-		Jelly.freeSession (ref thisSession, ref iFlags);
+		Jelly.freeSession (ref thisSession);
 
 	}
 
@@ -751,7 +751,7 @@ public class Tests : MonoBehaviour {
 			          " VALUE: " + current.Value + " DATA: " + current.Data);
 		}
 		iFlags = PIXE_PSML_UNSET_FLAG;
-		Jelly.freeSession (ref thisSession, ref iFlags);
+		Jelly.freeSession (ref thisSession);
 		
 	}
 
@@ -821,7 +821,7 @@ public class Tests : MonoBehaviour {
 			          " VALUE: " + current.Value + " DATA: " + current.Data);
 		}
 		iFlags = PIXE_PSML_UNSET_FLAG;
-		Jelly.freeSession (ref thisSession, ref iFlags);
+		Jelly.freeSession (ref thisSession);
 		
 	}
 	// High volume test - over 1000 writes then 1000 reads 
@@ -903,7 +903,7 @@ public class Tests : MonoBehaviour {
 		}
 
 		iFlags = PIXE_PSML_UNSET_FLAG;
-		Jelly.freeSession (ref thisSession, ref iFlags);
+		Jelly.freeSession (ref thisSession);
 		
 	}
 }

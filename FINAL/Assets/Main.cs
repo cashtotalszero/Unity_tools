@@ -40,7 +40,7 @@ public class Main : MonoBehaviour {
 		// Initialise the session
 		API.Initialise (ref thisSession, iOceanIndex, ref iFlags);	
 	
-		// Call LoadPsml()
+		//Call LoadPsml()
 		PSML.LoadPsml (ref thisSession);
 		return;
 	}
@@ -135,7 +135,7 @@ public class Main : MonoBehaviour {
 		}
 
 		// (10) Release the session ready for the next user
-		API.freeSession (ref thisSession, ref iFlags);
+		API.freeSession (ref thisSession);
 		Debug.Log ("END");
 		return;
 	}

@@ -12,6 +12,7 @@ public class Constants : MonoBehaviour {
 	public int PSML_WRITE_ATTRIBUTE = 4;
 	public int PSML_ATTRIBUTE = 5;
 	public int PSML_ELEMENT = 6;
+	public int PSML_MOVE = 7;
 
 	// Unsafe iFlags
 	public int OCEAN_READ_MOLECULE_NAME = 0;

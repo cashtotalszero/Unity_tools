@@ -233,6 +233,8 @@ public class JellyfishXMLgui : MonoBehaviour {
 			Debug.Log("SUCESS!");
 			success = true;
 		}
+		// Free session at end of use
+		API.freeSession (ref iSessionIndex);
 	}
 	
 	// XML VALIDATION

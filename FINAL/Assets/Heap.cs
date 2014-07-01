@@ -133,7 +133,6 @@ public class Heap : MonoBehaviour {
 			if(findMolecule(ref session, ref ocean, ref sPath, iCursor)) {
 				// If Attribute with that name already exists, overwrite the value
 				if(iFlags == PIXE.PSML_WRITE_ATTRIBUTE) {
-					//UnityEngine.Debug.Log("WRITTEN YO - "+oValue);
 					iCursor = session.Cursor;
 					ocean[iCursor].Value = oValue;
 					ocean[iCursor].Data = (oValue.GetType ()).ToString ();
@@ -257,7 +256,11 @@ public class Heap : MonoBehaviour {
 		#if (PIXE_DEBUG_PROFILER)
 		Profiler.BeginSample ("Move");
 		#endif
-		
+
+		// Do not execute if operation has already failed.
+		if (iFlags <= PIXE.OP_FAIL) {
+			return false;
+		}
 		// Retrieve the session cursor and correct ocean
 		Session session = sessionList[iSessionIndex];
 		List<Molecule> ocean = oceanList[session.Ocean];
@@ -313,7 +316,7 @@ public class Heap : MonoBehaviour {
 		return ocean [session.Cursor].Name;
 	}
 
-	public void freeSession(ref int iSessionIndex, ref int iFlags)
+	public void freeSession(ref int iSessionIndex)
 	{
 		#if (PIXE_DEBUG_PROFILER)
 		Profiler.BeginSample ("freeSession");
@@ -488,7 +491,7 @@ public class Heap : MonoBehaviour {
 		    (ocean [iLocation].Name != "" && ocean [iLocation].Name != null)) {
 			// If the Drop being written is the smaller:
 			if((int)ocean[iHeader].Value < (int)ocean[iLocation].Value) {
-				moveDrop(ref session, ref ocean, ref iHeader/*, ref iFlags*/, true);
+				moveDrop(ref session, ref ocean, ref iHeader, true);
 				// Amend the write lLocation to match the new Drop
 				iLocation = iHeader;
 				iLocation += iOffset;
@@ -545,7 +548,7 @@ public class Heap : MonoBehaviour {
 		createMolecule(
 			ref session, ref ocean,
 			iCursor, iCursor, 
-			ocean [iOrigin].Name, "H", 0, (iParentHeader - iCursor), ref iFlags);   /// CHANGE 1 to 0 if wrong
+			ocean [iOrigin].Name, "H", 0, (iParentHeader - iCursor), ref iFlags);
 
 		// Update the offset value in the parent element molecule to point to this Header
 		ocean [iOrigin].Value = (iCursor - iOrigin);
@@ -648,6 +651,7 @@ public class Heap : MonoBehaviour {
 			// Attempt to move cursor to provided path
 			int i=0, iDepth = sPathArray.GetLength(0);
 			bool bFound = true;
+
 			while(i<iDepth && bFound == true) {
 				bFound = Move (session.ID, sPathArray[i], ref iFlags);
 				i++;
