@@ -1,4 +1,19 @@
-﻿#define PIXE_DEBUG_LOG
+/* 
+Gamification of Space Exploration Project.
+
+Written in 2014 by Alex Parrott
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software. If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+*/
+
+#define PIXE_DEBUG_LOG
 //#undef PIXE_DEBUG_LOG
 
 //#define PIXE_DEBUG_PROFILER
@@ -67,7 +82,7 @@ public class Heap : MonoBehaviour {
 				List<Molecule> ocean = oceanList[iOceanIndex];
 				Molecule home = ocean[PIXE.OCEAN_HOME];
 				session.Cursor = (int)home.Value;
-				// Set privleges - according to iFlags - INCOMPLETE
+				// Set privileges - according to iFlags - INCOMPLETE
 				iSessionIndex = i;
 				break;
 			}
